@@ -14,7 +14,10 @@ T _$identity<T>(T value) => value;
 
 /// @nodoc
 mixin _$Position {
+  /// The 1-based line number.
   int get line;
+
+  /// The 1-based column number.
   int get column;
 
   /// Create a copy of Position
@@ -236,8 +239,11 @@ extension PositionPatterns on Position {
 class _Position extends Position {
   const _Position({required this.line, required this.column}) : super._();
 
+  /// The 1-based line number.
   @override
   final int line;
+
+  /// The 1-based column number.
   @override
   final int column;
 
@@ -307,9 +313,16 @@ class __$PositionCopyWithImpl<$Res> implements _$PositionCopyWith<$Res> {
 
 /// @nodoc
 mixin _$Range {
+  /// The 1-based line number where the range starts.
   int get startLine;
+
+  /// The 1-based column number where the range starts.
   int get startColumn;
+
+  /// The 1-based line number where the range ends.
   int get endLine;
+
+  /// The 1-based column number where the range ends.
   int get endColumn;
 
   /// Create a copy of Range
@@ -560,12 +573,19 @@ class _Range extends Range {
       required this.endColumn})
       : super._();
 
+  /// The 1-based line number where the range starts.
   @override
   final int startLine;
+
+  /// The 1-based column number where the range starts.
   @override
   final int startColumn;
+
+  /// The 1-based line number where the range ends.
   @override
   final int endLine;
+
+  /// The 1-based column number where the range ends.
   @override
   final int endColumn;
 
@@ -650,12 +670,25 @@ class __$RangeCopyWithImpl<$Res> implements _$RangeCopyWith<$Res> {
 
 /// @nodoc
 mixin _$MarkerData {
+  /// The range in the document where the marker should be displayed.
   Range get range;
+
+  /// The message to display when hovering over the marker.
   String get message;
+
+  /// The severity level of the marker.
   MarkerSeverity get severity;
+
+  /// An optional error code.
   String? get code;
+
+  /// The source of the marker (e.g., 'linter').
   String? get source;
+
+  /// Optional tags, such as `unnecessary` or `deprecated`.
   List<String>? get tags;
+
+  /// Optional related information, providing links to other locations.
   List<RelatedInformation>? get relatedInformation;
 
   /// Create a copy of MarkerData
@@ -974,18 +1007,31 @@ class _MarkerData extends MarkerData {
         _relatedInformation = relatedInformation,
         super._();
 
+  /// The range in the document where the marker should be displayed.
   @override
   final Range range;
+
+  /// The message to display when hovering over the marker.
   @override
   final String message;
+
+  /// The severity level of the marker.
   @override
   @JsonKey()
   final MarkerSeverity severity;
+
+  /// An optional error code.
   @override
   final String? code;
+
+  /// The source of the marker (e.g., 'linter').
   @override
   final String? source;
+
+  /// Optional tags, such as `unnecessary` or `deprecated`.
   final List<String>? _tags;
+
+  /// Optional tags, such as `unnecessary` or `deprecated`.
   @override
   List<String>? get tags {
     final value = _tags;
@@ -995,7 +1041,10 @@ class _MarkerData extends MarkerData {
     return EqualUnmodifiableListView(value);
   }
 
+  /// Optional related information, providing links to other locations.
   final List<RelatedInformation>? _relatedInformation;
+
+  /// Optional related information, providing links to other locations.
   @override
   List<RelatedInformation>? get relatedInformation {
     final value = _relatedInformation;
@@ -1133,8 +1182,13 @@ class __$MarkerDataCopyWithImpl<$Res> implements _$MarkerDataCopyWith<$Res> {
 
 /// @nodoc
 mixin _$RelatedInformation {
+  /// The URI of the resource to link to.
   Uri get resource;
+
+  /// The range within the resource to highlight.
   Range get range;
+
+  /// The message to display for this piece of information.
   String get message;
 
   /// Create a copy of RelatedInformation
@@ -1380,10 +1434,15 @@ class _RelatedInformation extends RelatedInformation {
       {required this.resource, required this.range, required this.message})
       : super._();
 
+  /// The URI of the resource to link to.
   @override
   final Uri resource;
+
+  /// The range within the resource to highlight.
   @override
   final Range range;
+
+  /// The message to display for this piece of information.
   @override
   final String message;
 
@@ -1475,7 +1534,10 @@ class __$RelatedInformationCopyWithImpl<$Res>
 
 /// @nodoc
 mixin _$DecorationOptions {
+  /// The range to which the decoration should be applied.
   Range get range;
+
+  /// A map of Monaco-specific decoration options.
   Map<String, dynamic> get options;
 
   /// Create a copy of DecorationOptions
@@ -1716,9 +1778,14 @@ class _DecorationOptions extends DecorationOptions {
       : _options = options,
         super._();
 
+  /// The range to which the decoration should be applied.
   @override
   final Range range;
+
+  /// A map of Monaco-specific decoration options.
   final Map<String, dynamic> _options;
+
+  /// A map of Monaco-specific decoration options.
   @override
   @JsonKey()
   Map<String, dynamic> get options {
@@ -1809,8 +1876,13 @@ class __$DecorationOptionsCopyWithImpl<$Res>
 
 /// @nodoc
 mixin _$EditOperation {
+  /// The range of text to be replaced.
   Range get range;
+
+  /// The new text to insert. An empty string results in a deletion.
   String get text;
+
+  /// If `true`, forces markers to move with the text.
   bool? get forceMoveMarkers;
 
   /// Create a copy of EditOperation
@@ -2058,10 +2130,15 @@ class _EditOperation extends EditOperation {
       {required this.range, required this.text, this.forceMoveMarkers})
       : super._();
 
+  /// The range of text to be replaced.
   @override
   final Range range;
+
+  /// The new text to insert. An empty string results in a deletion.
   @override
   final String text;
+
+  /// If `true`, forces markers to move with the text.
   @override
   final bool? forceMoveMarkers;
 
@@ -2153,15 +2230,34 @@ class __$EditOperationCopyWithImpl<$Res>
 
 /// @nodoc
 mixin _$CompletionItem {
+  /// The label of this completion item.
   String get label;
+
+  /// The text to be inserted into the document. If `null`, [label] is used.
   String? get insertText;
+
+  /// The kind of this completion item (e.g., method, function).
   CompletionItemKind? get kind;
+
+  /// A human-readable string with additional information about this item.
   String? get detail;
+
+  /// A human-readable string that represents a doc-comment.
   String? get documentation;
+
+  /// A string that should be used when comparing this item with other items.
   String? get sortText;
+
+  /// A string that should be used when filtering a set of completion items.
   String? get filterText;
+
+  /// The range of text to be replaced by this completion item.
   Range? get range;
+
+  /// Characters that trigger the commit of this completion.
   List<String>? get commitCharacters;
+
+  /// Rules that control how the [insertText] is formatted.
   Set<InsertTextRule>? get insertTextRules;
 
   /// Create a copy of CompletionItem
@@ -2553,23 +2649,42 @@ class _CompletionItem extends CompletionItem {
         _insertTextRules = insertTextRules,
         super._();
 
+  /// The label of this completion item.
   @override
   final String label;
+
+  /// The text to be inserted into the document. If `null`, [label] is used.
   @override
   final String? insertText;
+
+  /// The kind of this completion item (e.g., method, function).
   @override
   final CompletionItemKind? kind;
+
+  /// A human-readable string with additional information about this item.
   @override
   final String? detail;
+
+  /// A human-readable string that represents a doc-comment.
   @override
   final String? documentation;
+
+  /// A string that should be used when comparing this item with other items.
   @override
   final String? sortText;
+
+  /// A string that should be used when filtering a set of completion items.
   @override
   final String? filterText;
+
+  /// The range of text to be replaced by this completion item.
   @override
   final Range? range;
+
+  /// Characters that trigger the commit of this completion.
   final List<String>? _commitCharacters;
+
+  /// Characters that trigger the commit of this completion.
   @override
   List<String>? get commitCharacters {
     final value = _commitCharacters;
@@ -2580,7 +2695,10 @@ class _CompletionItem extends CompletionItem {
     return EqualUnmodifiableListView(value);
   }
 
+  /// Rules that control how the [insertText] is formatted.
   final Set<InsertTextRule>? _insertTextRules;
+
+  /// Rules that control how the [insertText] is formatted.
   @override
   Set<InsertTextRule>? get insertTextRules {
     final value = _insertTextRules;
@@ -2750,7 +2868,10 @@ class __$CompletionItemCopyWithImpl<$Res>
 
 /// @nodoc
 mixin _$CompletionList {
+  /// The list of completion suggestions.
   List<CompletionItem> get suggestions;
+
+  /// If `true`, indicates that this is not the full list of suggestions.
   bool get isIncomplete;
 
   /// Create a copy of CompletionList
@@ -2985,7 +3106,10 @@ class _CompletionList extends CompletionList {
       : _suggestions = suggestions,
         super._();
 
+  /// The list of completion suggestions.
   final List<CompletionItem> _suggestions;
+
+  /// The list of completion suggestions.
   @override
   List<CompletionItem> get suggestions {
     if (_suggestions is EqualUnmodifiableListView) return _suggestions;
@@ -2993,6 +3117,7 @@ class _CompletionList extends CompletionList {
     return EqualUnmodifiableListView(_suggestions);
   }
 
+  /// If `true`, indicates that this is not the full list of suggestions.
   @override
   @JsonKey()
   final bool isIncomplete;
@@ -3068,14 +3193,31 @@ class __$CompletionListCopyWithImpl<$Res>
 
 /// @nodoc
 mixin _$CompletionRequest {
+  /// The unique ID of the completion provider that was invoked.
   String get providerId;
+
+  /// A unique ID for this specific request.
   String get requestId;
+
+  /// The language ID of the document.
   String get language;
+
+  /// The URI of the document.
   Uri? get uri;
+
+  /// The position in the document where the request was triggered.
   Position get position;
+
+  /// The default range to be replaced by a completion item.
   Range get defaultRange;
+
+  /// The text of the line where the request was triggered.
   String? get lineText;
+
+  /// The kind of trigger that initiated the completion request.
   int? get triggerKind;
+
+  /// The character that triggered the completion request.
   String? get triggerCharacter;
 
   /// Create a copy of CompletionRequest
@@ -3450,22 +3592,39 @@ class _CompletionRequest extends CompletionRequest {
       this.triggerCharacter})
       : super._();
 
+  /// The unique ID of the completion provider that was invoked.
   @override
   final String providerId;
+
+  /// A unique ID for this specific request.
   @override
   final String requestId;
+
+  /// The language ID of the document.
   @override
   final String language;
+
+  /// The URI of the document.
   @override
   final Uri? uri;
+
+  /// The position in the document where the request was triggered.
   @override
   final Position position;
+
+  /// The default range to be replaced by a completion item.
   @override
   final Range defaultRange;
+
+  /// The text of the line where the request was triggered.
   @override
   final String? lineText;
+
+  /// The kind of trigger that initiated the completion request.
   @override
   final int? triggerKind;
+
+  /// The character that triggered the completion request.
   @override
   final String? triggerCharacter;
 
@@ -3622,10 +3781,19 @@ class __$CompletionRequestCopyWithImpl<$Res>
 
 /// @nodoc
 mixin _$FindOptions {
+  /// If `true`, treats the search query as a regular expression.
   bool get isRegex;
+
+  /// If `true`, performs a case-sensitive search.
   bool get matchCase;
+
+  /// If `true`, only matches whole words.
   bool get wholeWord;
+
+  /// If `true`, searches only within the editable range of the document.
   bool? get searchOnlyEditableRange;
+
+  /// The maximum number of matches to find.
   int? get limitResultCount;
 
   /// Create a copy of FindOptions
@@ -3892,17 +4060,26 @@ class _FindOptions extends FindOptions {
       this.limitResultCount})
       : super._();
 
+  /// If `true`, treats the search query as a regular expression.
   @override
   @JsonKey()
   final bool isRegex;
+
+  /// If `true`, performs a case-sensitive search.
   @override
   @JsonKey()
   final bool matchCase;
+
+  /// If `true`, only matches whole words.
   @override
   @JsonKey()
   final bool wholeWord;
+
+  /// If `true`, searches only within the editable range of the document.
   @override
   final bool? searchOnlyEditableRange;
+
+  /// The maximum number of matches to find.
   @override
   final int? limitResultCount;
 
@@ -4002,12 +4179,25 @@ class __$FindOptionsCopyWithImpl<$Res> implements _$FindOptionsCopyWith<$Res> {
 
 /// @nodoc
 mixin _$LiveStats {
+  /// The total number of lines in the document.
   ({int value, String label}) get lineCount;
+
+  /// The total number of characters in the document.
   ({int value, String label}) get charCount;
+
+  /// The number of lines in the current selection.
   ({int value, String label}) get selectedLines;
+
+  /// The number of characters in the current selection.
   ({int value, String label}) get selectedCharacters;
+
+  /// The number of active cursors/selections.
   ({int value, String label}) get caretCount;
+
+  /// The current cursor position, formatted as "line:column".
   ({int value, String label})? get cursorPosition;
+
+  /// The language ID of the current document.
   String? get language;
 
   /// Create a copy of LiveStats
@@ -4327,18 +4517,31 @@ class _LiveStats extends LiveStats {
       this.language})
       : super._();
 
+  /// The total number of lines in the document.
   @override
   final ({int value, String label}) lineCount;
+
+  /// The total number of characters in the document.
   @override
   final ({int value, String label}) charCount;
+
+  /// The number of lines in the current selection.
   @override
   final ({int value, String label}) selectedLines;
+
+  /// The number of characters in the current selection.
   @override
   final ({int value, String label}) selectedCharacters;
+
+  /// The number of active cursors/selections.
   @override
   final ({int value, String label}) caretCount;
+
+  /// The current cursor position, formatted as "line:column".
   @override
   final ({int value, String label})? cursorPosition;
+
+  /// The language ID of the current document.
   @override
   final String? language;
 
@@ -4454,13 +4657,28 @@ class __$LiveStatsCopyWithImpl<$Res> implements _$LiveStatsCopyWith<$Res> {
 
 /// @nodoc
 mixin _$EditorState {
+  /// The full text content of the editor.
   String get content;
+
+  /// The current selection range.
   Range? get selection;
+
+  /// The primary cursor position.
   Position? get cursorPosition;
+
+  /// The total number of lines in the document.
   int get lineCount;
+
+  /// `true` if the content has been modified since the last save.
   bool get hasUnsavedChanges;
+
+  /// The language ID of the document.
   String? get language;
+
+  /// The theme ID currently applied to the editor.
   String? get theme;
+
+  /// A snapshot of live statistics.
   LiveStats? get stats;
 
   /// Create a copy of EditorState
@@ -4839,20 +5057,35 @@ class _EditorState extends EditorState {
       this.stats})
       : super._();
 
+  /// The full text content of the editor.
   @override
   final String content;
+
+  /// The current selection range.
   @override
   final Range? selection;
+
+  /// The primary cursor position.
   @override
   final Position? cursorPosition;
+
+  /// The total number of lines in the document.
   @override
   final int lineCount;
+
+  /// `true` if the content has been modified since the last save.
   @override
   final bool hasUnsavedChanges;
+
+  /// The language ID of the document.
   @override
   final String? language;
+
+  /// The theme ID currently applied to the editor.
   @override
   final String? theme;
+
+  /// A snapshot of live statistics.
   @override
   final LiveStats? stats;
 
@@ -5022,7 +5255,10 @@ class __$EditorStateCopyWithImpl<$Res> implements _$EditorStateCopyWith<$Res> {
 
 /// @nodoc
 mixin _$FindMatch {
+  /// The range of the matched text.
   Range get range;
+
+  /// The text that was matched.
   String? get match;
 
   /// Create a copy of FindMatch
@@ -5256,8 +5492,11 @@ extension FindMatchPatterns on FindMatch {
 class _FindMatch extends FindMatch {
   const _FindMatch({required this.range, this.match}) : super._();
 
+  /// The range of the matched text.
   @override
   final Range range;
+
+  /// The text that was matched.
   @override
   final String? match;
 
@@ -5336,6 +5575,717 @@ class __$FindMatchCopyWithImpl<$Res> implements _$FindMatchCopyWith<$Res> {
     return $RangeCopyWith<$Res>(_self.range, (value) {
       return _then(_self.copyWith(range: value));
     });
+  }
+}
+
+/// @nodoc
+mixin _$JsonDiagnosticsOptions {
+  /// If set, comments are tolerated. If set to false, syntax errors will be emitted for comments
+  bool? get allowComments;
+
+  /// If set, the schema service would load schema content on-demand with 'fetch' if available
+  bool? get enableSchemaRequest;
+
+  /// A list of known schemas and/or associations of schemas to file names.
+  List<JsonDiagnosticsSchema>? get schemas;
+
+  /// Create a copy of JsonDiagnosticsOptions
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $JsonDiagnosticsOptionsCopyWith<JsonDiagnosticsOptions> get copyWith =>
+      _$JsonDiagnosticsOptionsCopyWithImpl<JsonDiagnosticsOptions>(
+          this as JsonDiagnosticsOptions, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is JsonDiagnosticsOptions &&
+            (identical(other.allowComments, allowComments) ||
+                other.allowComments == allowComments) &&
+            (identical(other.enableSchemaRequest, enableSchemaRequest) ||
+                other.enableSchemaRequest == enableSchemaRequest) &&
+            const DeepCollectionEquality().equals(other.schemas, schemas));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, allowComments,
+      enableSchemaRequest, const DeepCollectionEquality().hash(schemas));
+
+  @override
+  String toString() {
+    return 'JsonDiagnosticsOptions(allowComments: $allowComments, enableSchemaRequest: $enableSchemaRequest, schemas: $schemas)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $JsonDiagnosticsOptionsCopyWith<$Res> {
+  factory $JsonDiagnosticsOptionsCopyWith(JsonDiagnosticsOptions value,
+          $Res Function(JsonDiagnosticsOptions) _then) =
+      _$JsonDiagnosticsOptionsCopyWithImpl;
+  @useResult
+  $Res call(
+      {bool? allowComments,
+      bool? enableSchemaRequest,
+      List<JsonDiagnosticsSchema>? schemas});
+}
+
+/// @nodoc
+class _$JsonDiagnosticsOptionsCopyWithImpl<$Res>
+    implements $JsonDiagnosticsOptionsCopyWith<$Res> {
+  _$JsonDiagnosticsOptionsCopyWithImpl(this._self, this._then);
+
+  final JsonDiagnosticsOptions _self;
+  final $Res Function(JsonDiagnosticsOptions) _then;
+
+  /// Create a copy of JsonDiagnosticsOptions
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? allowComments = freezed,
+    Object? enableSchemaRequest = freezed,
+    Object? schemas = freezed,
+  }) {
+    return _then(_self.copyWith(
+      allowComments: freezed == allowComments
+          ? _self.allowComments
+          : allowComments // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      enableSchemaRequest: freezed == enableSchemaRequest
+          ? _self.enableSchemaRequest
+          : enableSchemaRequest // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      schemas: freezed == schemas
+          ? _self.schemas
+          : schemas // ignore: cast_nullable_to_non_nullable
+              as List<JsonDiagnosticsSchema>?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [JsonDiagnosticsOptions].
+extension JsonDiagnosticsOptionsPatterns on JsonDiagnosticsOptions {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_JsonDiagnosticsOptions value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _JsonDiagnosticsOptions() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_JsonDiagnosticsOptions value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _JsonDiagnosticsOptions():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_JsonDiagnosticsOptions value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _JsonDiagnosticsOptions() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(bool? allowComments, bool? enableSchemaRequest,
+            List<JsonDiagnosticsSchema>? schemas)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _JsonDiagnosticsOptions() when $default != null:
+        return $default(
+            _that.allowComments, _that.enableSchemaRequest, _that.schemas);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(bool? allowComments, bool? enableSchemaRequest,
+            List<JsonDiagnosticsSchema>? schemas)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _JsonDiagnosticsOptions():
+        return $default(
+            _that.allowComments, _that.enableSchemaRequest, _that.schemas);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(bool? allowComments, bool? enableSchemaRequest,
+            List<JsonDiagnosticsSchema>? schemas)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _JsonDiagnosticsOptions() when $default != null:
+        return $default(
+            _that.allowComments, _that.enableSchemaRequest, _that.schemas);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _JsonDiagnosticsOptions extends JsonDiagnosticsOptions {
+  const _JsonDiagnosticsOptions(
+      {this.allowComments,
+      this.enableSchemaRequest,
+      final List<JsonDiagnosticsSchema>? schemas})
+      : _schemas = schemas,
+        super._();
+
+  /// If set, comments are tolerated. If set to false, syntax errors will be emitted for comments
+  @override
+  final bool? allowComments;
+
+  /// If set, the schema service would load schema content on-demand with 'fetch' if available
+  @override
+  final bool? enableSchemaRequest;
+
+  /// A list of known schemas and/or associations of schemas to file names.
+  final List<JsonDiagnosticsSchema>? _schemas;
+
+  /// A list of known schemas and/or associations of schemas to file names.
+  @override
+  List<JsonDiagnosticsSchema>? get schemas {
+    final value = _schemas;
+    if (value == null) return null;
+    if (_schemas is EqualUnmodifiableListView) return _schemas;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  /// Create a copy of JsonDiagnosticsOptions
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$JsonDiagnosticsOptionsCopyWith<_JsonDiagnosticsOptions> get copyWith =>
+      __$JsonDiagnosticsOptionsCopyWithImpl<_JsonDiagnosticsOptions>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _JsonDiagnosticsOptions &&
+            (identical(other.allowComments, allowComments) ||
+                other.allowComments == allowComments) &&
+            (identical(other.enableSchemaRequest, enableSchemaRequest) ||
+                other.enableSchemaRequest == enableSchemaRequest) &&
+            const DeepCollectionEquality().equals(other._schemas, _schemas));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, allowComments,
+      enableSchemaRequest, const DeepCollectionEquality().hash(_schemas));
+
+  @override
+  String toString() {
+    return 'JsonDiagnosticsOptions(allowComments: $allowComments, enableSchemaRequest: $enableSchemaRequest, schemas: $schemas)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$JsonDiagnosticsOptionsCopyWith<$Res>
+    implements $JsonDiagnosticsOptionsCopyWith<$Res> {
+  factory _$JsonDiagnosticsOptionsCopyWith(_JsonDiagnosticsOptions value,
+          $Res Function(_JsonDiagnosticsOptions) _then) =
+      __$JsonDiagnosticsOptionsCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {bool? allowComments,
+      bool? enableSchemaRequest,
+      List<JsonDiagnosticsSchema>? schemas});
+}
+
+/// @nodoc
+class __$JsonDiagnosticsOptionsCopyWithImpl<$Res>
+    implements _$JsonDiagnosticsOptionsCopyWith<$Res> {
+  __$JsonDiagnosticsOptionsCopyWithImpl(this._self, this._then);
+
+  final _JsonDiagnosticsOptions _self;
+  final $Res Function(_JsonDiagnosticsOptions) _then;
+
+  /// Create a copy of JsonDiagnosticsOptions
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? allowComments = freezed,
+    Object? enableSchemaRequest = freezed,
+    Object? schemas = freezed,
+  }) {
+    return _then(_JsonDiagnosticsOptions(
+      allowComments: freezed == allowComments
+          ? _self.allowComments
+          : allowComments // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      enableSchemaRequest: freezed == enableSchemaRequest
+          ? _self.enableSchemaRequest
+          : enableSchemaRequest // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      schemas: freezed == schemas
+          ? _self._schemas
+          : schemas // ignore: cast_nullable_to_non_nullable
+              as List<JsonDiagnosticsSchema>?,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$JsonDiagnosticsSchema {
+  /// The URI of the schema to validate against.
+  Uri get uri;
+  List<String>? get fileMatch;
+  Map<String, dynamic>? get schema;
+
+  /// Create a copy of JsonDiagnosticsSchema
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $JsonDiagnosticsSchemaCopyWith<JsonDiagnosticsSchema> get copyWith =>
+      _$JsonDiagnosticsSchemaCopyWithImpl<JsonDiagnosticsSchema>(
+          this as JsonDiagnosticsSchema, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is JsonDiagnosticsSchema &&
+            (identical(other.uri, uri) || other.uri == uri) &&
+            const DeepCollectionEquality().equals(other.fileMatch, fileMatch) &&
+            const DeepCollectionEquality().equals(other.schema, schema));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      uri,
+      const DeepCollectionEquality().hash(fileMatch),
+      const DeepCollectionEquality().hash(schema));
+
+  @override
+  String toString() {
+    return 'JsonDiagnosticsSchema(uri: $uri, fileMatch: $fileMatch, schema: $schema)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $JsonDiagnosticsSchemaCopyWith<$Res> {
+  factory $JsonDiagnosticsSchemaCopyWith(JsonDiagnosticsSchema value,
+          $Res Function(JsonDiagnosticsSchema) _then) =
+      _$JsonDiagnosticsSchemaCopyWithImpl;
+  @useResult
+  $Res call({Uri uri, List<String>? fileMatch, Map<String, dynamic>? schema});
+}
+
+/// @nodoc
+class _$JsonDiagnosticsSchemaCopyWithImpl<$Res>
+    implements $JsonDiagnosticsSchemaCopyWith<$Res> {
+  _$JsonDiagnosticsSchemaCopyWithImpl(this._self, this._then);
+
+  final JsonDiagnosticsSchema _self;
+  final $Res Function(JsonDiagnosticsSchema) _then;
+
+  /// Create a copy of JsonDiagnosticsSchema
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? uri = null,
+    Object? fileMatch = freezed,
+    Object? schema = freezed,
+  }) {
+    return _then(_self.copyWith(
+      uri: null == uri
+          ? _self.uri
+          : uri // ignore: cast_nullable_to_non_nullable
+              as Uri,
+      fileMatch: freezed == fileMatch
+          ? _self.fileMatch
+          : fileMatch // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
+      schema: freezed == schema
+          ? _self.schema
+          : schema // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [JsonDiagnosticsSchema].
+extension JsonDiagnosticsSchemaPatterns on JsonDiagnosticsSchema {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_JsonDiagnosticsSchema value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _JsonDiagnosticsSchema() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_JsonDiagnosticsSchema value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _JsonDiagnosticsSchema():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_JsonDiagnosticsSchema value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _JsonDiagnosticsSchema() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            Uri uri, List<String>? fileMatch, Map<String, dynamic>? schema)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _JsonDiagnosticsSchema() when $default != null:
+        return $default(_that.uri, _that.fileMatch, _that.schema);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            Uri uri, List<String>? fileMatch, Map<String, dynamic>? schema)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _JsonDiagnosticsSchema():
+        return $default(_that.uri, _that.fileMatch, _that.schema);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            Uri uri, List<String>? fileMatch, Map<String, dynamic>? schema)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _JsonDiagnosticsSchema() when $default != null:
+        return $default(_that.uri, _that.fileMatch, _that.schema);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _JsonDiagnosticsSchema extends JsonDiagnosticsSchema {
+  const _JsonDiagnosticsSchema(
+      {required this.uri,
+      final List<String>? fileMatch,
+      final Map<String, dynamic>? schema})
+      : _fileMatch = fileMatch,
+        _schema = schema,
+        super._();
+
+  /// The URI of the schema to validate against.
+  @override
+  final Uri uri;
+  final List<String>? _fileMatch;
+  @override
+  List<String>? get fileMatch {
+    final value = _fileMatch;
+    if (value == null) return null;
+    if (_fileMatch is EqualUnmodifiableListView) return _fileMatch;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  final Map<String, dynamic>? _schema;
+  @override
+  Map<String, dynamic>? get schema {
+    final value = _schema;
+    if (value == null) return null;
+    if (_schema is EqualUnmodifiableMapView) return _schema;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(value);
+  }
+
+  /// Create a copy of JsonDiagnosticsSchema
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$JsonDiagnosticsSchemaCopyWith<_JsonDiagnosticsSchema> get copyWith =>
+      __$JsonDiagnosticsSchemaCopyWithImpl<_JsonDiagnosticsSchema>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _JsonDiagnosticsSchema &&
+            (identical(other.uri, uri) || other.uri == uri) &&
+            const DeepCollectionEquality()
+                .equals(other._fileMatch, _fileMatch) &&
+            const DeepCollectionEquality().equals(other._schema, _schema));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      uri,
+      const DeepCollectionEquality().hash(_fileMatch),
+      const DeepCollectionEquality().hash(_schema));
+
+  @override
+  String toString() {
+    return 'JsonDiagnosticsSchema(uri: $uri, fileMatch: $fileMatch, schema: $schema)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$JsonDiagnosticsSchemaCopyWith<$Res>
+    implements $JsonDiagnosticsSchemaCopyWith<$Res> {
+  factory _$JsonDiagnosticsSchemaCopyWith(_JsonDiagnosticsSchema value,
+          $Res Function(_JsonDiagnosticsSchema) _then) =
+      __$JsonDiagnosticsSchemaCopyWithImpl;
+  @override
+  @useResult
+  $Res call({Uri uri, List<String>? fileMatch, Map<String, dynamic>? schema});
+}
+
+/// @nodoc
+class __$JsonDiagnosticsSchemaCopyWithImpl<$Res>
+    implements _$JsonDiagnosticsSchemaCopyWith<$Res> {
+  __$JsonDiagnosticsSchemaCopyWithImpl(this._self, this._then);
+
+  final _JsonDiagnosticsSchema _self;
+  final $Res Function(_JsonDiagnosticsSchema) _then;
+
+  /// Create a copy of JsonDiagnosticsSchema
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? uri = null,
+    Object? fileMatch = freezed,
+    Object? schema = freezed,
+  }) {
+    return _then(_JsonDiagnosticsSchema(
+      uri: null == uri
+          ? _self.uri
+          : uri // ignore: cast_nullable_to_non_nullable
+              as Uri,
+      fileMatch: freezed == fileMatch
+          ? _self._fileMatch
+          : fileMatch // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
+      schema: freezed == schema
+          ? _self._schema
+          : schema // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>?,
+    ));
   }
 }
 

@@ -1125,3 +1125,76 @@ sealed class FindMatch with _$FindMatch {
         if (match != null) 'match': match,
       };
 }
+
+/// Defines options for JSON diagnostics and schema validation.
+@freezed
+sealed class JsonDiagnosticsOptions with _$JsonDiagnosticsOptions {
+  const factory JsonDiagnosticsOptions({
+    /// If set, comments are tolerated. If set to false, syntax errors will be emitted for comments
+    bool? allowComments,
+
+    /// If set, the schema service would load schema content on-demand with 'fetch' if available
+    bool? enableSchemaRequest,
+
+    /// A list of known schemas and/or associations of schemas to file names.
+    List<JsonDiagnosticsSchema>? schemas,
+  }) = _JsonDiagnosticsOptions;
+
+  const JsonDiagnosticsOptions._();
+
+  /// Creates [JsonDiagnosticsOptions] from a JSON map.
+  factory JsonDiagnosticsOptions.fromJson(Map<String, dynamic> json) {
+    return JsonDiagnosticsOptions(
+      allowComments: json.tryGetBool('allowComments'),
+      enableSchemaRequest: json.tryGetBool('enableSchemaRequest'),
+      schemas: json
+          .tryGetList<Map<String, dynamic>>('schemas')
+          ?.map(JsonDiagnosticsSchema.fromJson)
+          .toList(),
+    );
+  }
+
+  /// Converts the diagnostic options to a JSON-compatible map.
+  Map<String, dynamic> toJson() => {
+        if (allowComments != null) 'allowComments': allowComments,
+        if (enableSchemaRequest != null)
+          'enableSchemaRequest': enableSchemaRequest,
+        if (schemas != null && schemas!.isNotEmpty)
+          'schemas': schemas!.map((schema) => schema.toJson()).toList(),
+      };
+}
+
+/// Represents a JSON schema definition for diagnostics and validation.
+@freezed
+sealed class JsonDiagnosticsSchema with _$JsonDiagnosticsSchema {
+  const factory JsonDiagnosticsSchema({
+    /// The URI of the schema to validate against.
+    required Uri uri,
+    List<String>? fileMatch,
+    Map<String, dynamic>? schema,
+  }) = _JsonDiagnosticsSchema;
+
+  const JsonDiagnosticsSchema._();
+
+  /// Creates a [JsonDiagnosticsSchema] from a JSON map.
+  factory JsonDiagnosticsSchema.fromJson(Map<String, dynamic> json) {
+    return JsonDiagnosticsSchema(
+      uri: Uri.parse(
+        json.getString(
+          'uri',
+          alternativeKeys: ['schemaUri'],
+          defaultValue: 'http://unknown/schema',
+        ),
+      ),
+      fileMatch: json.tryGetList<String>('fileMatch'),
+      schema: json.tryGetMap<String, dynamic>('schema'),
+    );
+  }
+
+  /// Converts the schema definition to a JSON-compatible map.
+  Map<String, dynamic> toJson() => {
+        'uri': uri.toString(),
+        if (fileMatch != null) 'fileMatch': fileMatch,
+        if (schema != null) 'schema': schema,
+      };
+}

@@ -14,41 +14,132 @@ T _$identity<T>(T value) => value;
 
 /// @nodoc
 mixin _$EditorOptions {
+  /// The initial syntax highlighting language.
+  ///
+  /// Defaults to [MonacoLanguage.dart].
+  /// Changing this value on an active editor triggers a re-tokenization.
   MonacoLanguage get language;
+
+  /// The color theme of the editor.
+  ///
+  /// Defaults to [MonacoTheme.vsDark].
   MonacoTheme get theme;
+
+  /// The font size in pixels.
   double get fontSize;
+
+  /// The font family to use.
+  ///
+  /// Accepts a CSS `font-family` string (e.g. "Fira Code, monospace").
   String get fontFamily;
+
+  /// The line height for editor lines.
+  ///
+  /// - Use `0` to let Monaco compute a value from [fontSize].
+  /// - Values between `0` and `8` are treated as multipliers of [fontSize]
+  ///   (for example, `1.4` means 140 percent of [fontSize]).
+  /// - Values `8` or greater are treated as absolute pixel values.
   double get lineHeight;
+
+  /// Controls whether long lines should wrap to the next line.
+  ///
+  /// If `true`, lines will wrap at the viewport width.
   bool get wordWrap;
+
+  /// Controls whether the minimap (code overview) is shown.
   bool get minimap;
+
+  /// Controls whether line numbers are displayed in the gutter.
   bool get lineNumbers;
+
+  /// A list of column numbers where vertical rulers should be rendered.
+  ///
+  /// Useful for enforcing line length limits (e.g. `[80, 120]`).
   List<int> get rulers;
+
+  /// The number of spaces a tab character is equal to.
+  ///
+  /// Also controls indentation size if [insertSpaces] is true.
   int get tabSize;
+
+  /// If `true`, pressing `Tab` inserts spaces instead of a tab character.
   bool get insertSpaces;
+
+  /// If `true`, prevents the user from editing the content.
   bool get readOnly;
+
+  /// If `true`, the editor will automatically resize to fit its container.
   bool get automaticLayout;
+
+  /// Optional padding for the editor content (top, bottom).
   Map<String, int>? get padding;
+
+  /// If `true`, allows scrolling beyond the last line of the file.
   bool get scrollBeyondLastLine;
+
+  /// If `true`, enables smooth scrolling animation.
   bool get smoothScrolling;
+
+  /// Controls the cursor blinking animation style.
   CursorBlinking get cursorBlinking;
+
+  /// Controls the visual style of the cursor (line, block, etc.).
   CursorStyle get cursorStyle;
+
+  /// Controls how whitespace characters are rendered.
   RenderWhitespace get renderWhitespace;
+
+  /// If `true`, enables colorization of matching brackets.
   bool get bracketPairColorization;
+
+  /// Controls automatic closing of brackets (e.g. `{` -> `{}`).
   AutoClosingBehavior get autoClosingBrackets;
+
+  /// Controls automatic closing of quotes (e.g. `"` -> `""`).
   AutoClosingBehavior get autoClosingQuotes;
+
+  /// If `true`, automatically formats text when pasted.
   bool get formatOnPaste;
+
+  /// If `true`, automatically formats text as you type.
   bool get formatOnType;
+
+  /// If `true`, shows the suggestion widget while typing.
   bool get quickSuggestions;
+
+  /// If `true`, enables font ligatures (requires a compatible font like Fira Code).
   bool get fontLigatures;
+
+  /// If `true`, shows parameter hints when typing function calls.
   bool get parameterHints;
+
+  /// If `true`, shows hover details when the mouse is over a symbol.
   bool get hover;
+
+  /// If `true`, enables the default context menu (right-click).
   bool get contextMenu;
+
+  /// If `true`, allows zooming the font size with Ctrl + Mouse Wheel.
   bool get mouseWheelZoom;
+
+  /// If `true`, renders selections with rounded corners.
   bool get roundedSelection;
+
+  /// If `true`, highlights other occurrences of the selected text.
   bool get selectionHighlight;
+
+  /// If `true`, draws a border around the overview ruler.
   bool get overviewRulerBorder;
+
+  /// If `true`, renders control characters.
   bool get renderControlCharacters;
+
+  /// If `true`, disables the "layer hinting" optimization.
+  ///
+  /// Try setting this to `true` if you see rendering artifacts on some platforms.
   bool get disableLayerHinting;
+
+  /// If `true`, disables monospace font optimizations.
   bool get disableMonospaceOptimizations;
 
   /// Create a copy of EditorOptions
@@ -843,31 +934,68 @@ class _EditorOptions extends EditorOptions {
         _padding = padding,
         super._();
 
+  /// The initial syntax highlighting language.
+  ///
+  /// Defaults to [MonacoLanguage.dart].
+  /// Changing this value on an active editor triggers a re-tokenization.
   @override
   @JsonKey()
   final MonacoLanguage language;
+
+  /// The color theme of the editor.
+  ///
+  /// Defaults to [MonacoTheme.vsDark].
   @override
   @JsonKey()
   final MonacoTheme theme;
+
+  /// The font size in pixels.
   @override
   @JsonKey()
   final double fontSize;
+
+  /// The font family to use.
+  ///
+  /// Accepts a CSS `font-family` string (e.g. "Fira Code, monospace").
   @override
   @JsonKey()
   final String fontFamily;
+
+  /// The line height for editor lines.
+  ///
+  /// - Use `0` to let Monaco compute a value from [fontSize].
+  /// - Values between `0` and `8` are treated as multipliers of [fontSize]
+  ///   (for example, `1.4` means 140 percent of [fontSize]).
+  /// - Values `8` or greater are treated as absolute pixel values.
   @override
   @JsonKey()
   final double lineHeight;
+
+  /// Controls whether long lines should wrap to the next line.
+  ///
+  /// If `true`, lines will wrap at the viewport width.
   @override
   @JsonKey()
   final bool wordWrap;
+
+  /// Controls whether the minimap (code overview) is shown.
   @override
   @JsonKey()
   final bool minimap;
+
+  /// Controls whether line numbers are displayed in the gutter.
   @override
   @JsonKey()
   final bool lineNumbers;
+
+  /// A list of column numbers where vertical rulers should be rendered.
+  ///
+  /// Useful for enforcing line length limits (e.g. `[80, 120]`).
   final List<int> _rulers;
+
+  /// A list of column numbers where vertical rulers should be rendered.
+  ///
+  /// Useful for enforcing line length limits (e.g. `[80, 120]`).
   @override
   @JsonKey()
   List<int> get rulers {
@@ -876,19 +1004,32 @@ class _EditorOptions extends EditorOptions {
     return EqualUnmodifiableListView(_rulers);
   }
 
+  /// The number of spaces a tab character is equal to.
+  ///
+  /// Also controls indentation size if [insertSpaces] is true.
   @override
   @JsonKey()
   final int tabSize;
+
+  /// If `true`, pressing `Tab` inserts spaces instead of a tab character.
   @override
   @JsonKey()
   final bool insertSpaces;
+
+  /// If `true`, prevents the user from editing the content.
   @override
   @JsonKey()
   final bool readOnly;
+
+  /// If `true`, the editor will automatically resize to fit its container.
   @override
   @JsonKey()
   final bool automaticLayout;
+
+  /// Optional padding for the editor content (top, bottom).
   final Map<String, int>? _padding;
+
+  /// Optional padding for the editor content (top, bottom).
   @override
   Map<String, int>? get padding {
     final value = _padding;
@@ -898,69 +1039,114 @@ class _EditorOptions extends EditorOptions {
     return EqualUnmodifiableMapView(value);
   }
 
+  /// If `true`, allows scrolling beyond the last line of the file.
   @override
   @JsonKey()
   final bool scrollBeyondLastLine;
+
+  /// If `true`, enables smooth scrolling animation.
   @override
   @JsonKey()
   final bool smoothScrolling;
+
+  /// Controls the cursor blinking animation style.
   @override
   @JsonKey()
   final CursorBlinking cursorBlinking;
+
+  /// Controls the visual style of the cursor (line, block, etc.).
   @override
   @JsonKey()
   final CursorStyle cursorStyle;
+
+  /// Controls how whitespace characters are rendered.
   @override
   @JsonKey()
   final RenderWhitespace renderWhitespace;
+
+  /// If `true`, enables colorization of matching brackets.
   @override
   @JsonKey()
   final bool bracketPairColorization;
+
+  /// Controls automatic closing of brackets (e.g. `{` -> `{}`).
   @override
   @JsonKey()
   final AutoClosingBehavior autoClosingBrackets;
+
+  /// Controls automatic closing of quotes (e.g. `"` -> `""`).
   @override
   @JsonKey()
   final AutoClosingBehavior autoClosingQuotes;
+
+  /// If `true`, automatically formats text when pasted.
   @override
   @JsonKey()
   final bool formatOnPaste;
+
+  /// If `true`, automatically formats text as you type.
   @override
   @JsonKey()
   final bool formatOnType;
+
+  /// If `true`, shows the suggestion widget while typing.
   @override
   @JsonKey()
   final bool quickSuggestions;
+
+  /// If `true`, enables font ligatures (requires a compatible font like Fira Code).
   @override
   @JsonKey()
   final bool fontLigatures;
+
+  /// If `true`, shows parameter hints when typing function calls.
   @override
   @JsonKey()
   final bool parameterHints;
+
+  /// If `true`, shows hover details when the mouse is over a symbol.
   @override
   @JsonKey()
   final bool hover;
+
+  /// If `true`, enables the default context menu (right-click).
   @override
   @JsonKey()
   final bool contextMenu;
+
+  /// If `true`, allows zooming the font size with Ctrl + Mouse Wheel.
   @override
   @JsonKey()
   final bool mouseWheelZoom;
+
+  /// If `true`, renders selections with rounded corners.
   @override
   @JsonKey()
   final bool roundedSelection;
+
+  /// If `true`, highlights other occurrences of the selected text.
   @override
   @JsonKey()
   final bool selectionHighlight;
+
+  /// If `true`, draws a border around the overview ruler.
   @override
   @JsonKey()
   final bool overviewRulerBorder;
+
+  /// If `true`, renders control characters.
   @override
   @JsonKey()
   final bool renderControlCharacters;
+
+  /// If `true`, disables the "layer hinting" optimization.
+  ///
+  /// Try setting this to `true` if you see rendering artifacts on some platforms.
   @override
   @JsonKey()
   final bool disableLayerHinting;
+
+  /// If `true`, disables monospace font optimizations.
   @override
   @JsonKey()
   final bool disableMonospaceOptimizations;

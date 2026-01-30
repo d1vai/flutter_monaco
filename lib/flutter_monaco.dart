@@ -87,7 +87,9 @@ export 'src/models/monaco_types.dart'
         MarkerSeverity,
         Position,
         Range,
-        RelatedInformation;
+        RelatedInformation,
+        JsonDiagnosticsOptions,
+        JsonDiagnosticsSchema;
 // Widget exports
 export 'src/widgets/monaco_editor_view.dart' show MonacoEditor;
 export 'src/widgets/monaco_focus_guard.dart' show MonacoFocusGuard;

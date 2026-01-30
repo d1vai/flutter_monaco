@@ -790,6 +790,14 @@ class MonacoAssets {
                   deltaDecorations: (oldIds, newDecos) =>
                     E().deltaDecorations(oldIds || [], newDecos || []),
 
+                  // JSON language diagnostics
+                  setJsonDiagnosticsOptions: (diagnostics) => {
+                    const model = E().getModel();
+                    if (model) {
+                      monaco.languages.json.jsonDefaults.setDiagnosticsOptions(diagnostics);
+                    }
+                  },
+
                   // Markers (diagnostics)
                   setModelMarkers: (owner, markers) =>
                     monaco.editor.setModelMarkers(E().getModel(), owner || 'flutter', markers || []),
