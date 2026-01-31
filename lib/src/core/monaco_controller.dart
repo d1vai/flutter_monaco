@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_monaco/flutter_monaco.dart';
 import 'package:flutter_monaco/src/core/monaco_bridge.dart';
-import 'package:flutter_monaco/src/models/monaco_types.dart';
 import 'package:flutter_monaco/src/platform/platform_webview.dart';
 
 /// A callback function that provides completion items for a given
@@ -265,7 +264,8 @@ class MonacoController {
   /// Waits for the editor to be ready before applying.
   Future<void> setJsonDiagnostics(JsonDiagnosticsOptions diagnostics) async {
     await _ensureReady();
-    await _webViewController.runJavaScript('flutterMonaco.setJsonDiagnosticsOptions(${jsonEncode(diagnostics.toJson())})');
+    await _webViewController.runJavaScript(
+        'flutterMonaco.setJsonDiagnosticsOptions(${jsonEncode(diagnostics.toJson())})');
   }
 
   /// Changes the editor's color theme.
