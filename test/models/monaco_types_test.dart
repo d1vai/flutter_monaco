@@ -683,4 +683,42 @@ void main() {
       expect(json['range'], isNotNull);
     });
   });
+
+  group('JsonDiagnosticsOptions', () {
+    test('toJson serializes configured diagnostics settings', () {
+      final options = JsonDiagnosticsOptions(
+        allowComments: true,
+        enableSchemaRequest: false,
+        validate: true,
+        trailingCommas: DiagnosticsSeverity.warning,
+        schemaRequest: DiagnosticsSeverity.error,
+        schemaValidation: DiagnosticsSeverity.warning,
+        comments: DiagnosticsSeverity.ignore,
+        schemas: [
+          JsonDiagnosticsSchema(
+            uri: Uri.parse('https://example.com/schema.json'),
+            fileMatch: ['*.json'],
+            schema: {'type': 'object'},
+          ),
+        ],
+      );
+
+      final json = options.toJson();
+
+      expect(json['validate'], true);
+      expect(json['allowComments'], true);
+      expect(json['enableSchemaRequest'], false);
+      expect(json['schemaRequest'], 'error');
+      expect(json['schemaValidation'], 'warning');
+      expect(json['comments'], 'ignore');
+      expect(json['trailingCommas'], 'warning');
+      expect(json['schemas'], [
+        {
+          'uri': 'https://example.com/schema.json',
+          'fileMatch': ['*.json'],
+          'schema': {'type': 'object'},
+        },
+      ]);
+    });
+  });
 }

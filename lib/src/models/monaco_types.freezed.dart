@@ -5586,6 +5586,23 @@ mixin _$JsonDiagnosticsOptions {
   /// If set, the schema service would load schema content on-demand with 'fetch' if available
   bool? get enableSchemaRequest;
 
+  /// If set, the schema service would validate schemas and report errors.
+  bool? get validate;
+
+  /// The severity level to use for schema request errors (e.g., if a schema fails to load).
+  /// Defaults to `warning` if not specified.
+  DiagnosticsSeverity? get schemaRequest;
+
+  /// The severity level to use for schema validation errors, `ignore` will disable validation.
+  /// Defaults to `warning` if not specified.
+  DiagnosticsSeverity? get schemaValidation;
+
+  /// The severity level to use for trailing comma errors. Defaults to `error` if not specified.
+  DiagnosticsSeverity? get trailingCommas;
+
+  /// The severity level to use for comments if `allowComments` is `true`. Defaults to `info` if not specified.
+  DiagnosticsSeverity? get comments;
+
   /// A list of known schemas and/or associations of schemas to file names.
   List<JsonDiagnosticsSchema>? get schemas;
 
@@ -5606,16 +5623,34 @@ mixin _$JsonDiagnosticsOptions {
                 other.allowComments == allowComments) &&
             (identical(other.enableSchemaRequest, enableSchemaRequest) ||
                 other.enableSchemaRequest == enableSchemaRequest) &&
+            (identical(other.validate, validate) ||
+                other.validate == validate) &&
+            (identical(other.schemaRequest, schemaRequest) ||
+                other.schemaRequest == schemaRequest) &&
+            (identical(other.schemaValidation, schemaValidation) ||
+                other.schemaValidation == schemaValidation) &&
+            (identical(other.trailingCommas, trailingCommas) ||
+                other.trailingCommas == trailingCommas) &&
+            (identical(other.comments, comments) ||
+                other.comments == comments) &&
             const DeepCollectionEquality().equals(other.schemas, schemas));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, allowComments,
-      enableSchemaRequest, const DeepCollectionEquality().hash(schemas));
+  int get hashCode => Object.hash(
+      runtimeType,
+      allowComments,
+      enableSchemaRequest,
+      validate,
+      schemaRequest,
+      schemaValidation,
+      trailingCommas,
+      comments,
+      const DeepCollectionEquality().hash(schemas));
 
   @override
   String toString() {
-    return 'JsonDiagnosticsOptions(allowComments: $allowComments, enableSchemaRequest: $enableSchemaRequest, schemas: $schemas)';
+    return 'JsonDiagnosticsOptions(allowComments: $allowComments, enableSchemaRequest: $enableSchemaRequest, validate: $validate, schemaRequest: $schemaRequest, schemaValidation: $schemaValidation, trailingCommas: $trailingCommas, comments: $comments, schemas: $schemas)';
   }
 }
 
@@ -5628,6 +5663,11 @@ abstract mixin class $JsonDiagnosticsOptionsCopyWith<$Res> {
   $Res call(
       {bool? allowComments,
       bool? enableSchemaRequest,
+      bool? validate,
+      DiagnosticsSeverity? schemaRequest,
+      DiagnosticsSeverity? schemaValidation,
+      DiagnosticsSeverity? trailingCommas,
+      DiagnosticsSeverity? comments,
       List<JsonDiagnosticsSchema>? schemas});
 }
 
@@ -5646,6 +5686,11 @@ class _$JsonDiagnosticsOptionsCopyWithImpl<$Res>
   $Res call({
     Object? allowComments = freezed,
     Object? enableSchemaRequest = freezed,
+    Object? validate = freezed,
+    Object? schemaRequest = freezed,
+    Object? schemaValidation = freezed,
+    Object? trailingCommas = freezed,
+    Object? comments = freezed,
     Object? schemas = freezed,
   }) {
     return _then(_self.copyWith(
@@ -5657,6 +5702,26 @@ class _$JsonDiagnosticsOptionsCopyWithImpl<$Res>
           ? _self.enableSchemaRequest
           : enableSchemaRequest // ignore: cast_nullable_to_non_nullable
               as bool?,
+      validate: freezed == validate
+          ? _self.validate
+          : validate // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      schemaRequest: freezed == schemaRequest
+          ? _self.schemaRequest
+          : schemaRequest // ignore: cast_nullable_to_non_nullable
+              as DiagnosticsSeverity?,
+      schemaValidation: freezed == schemaValidation
+          ? _self.schemaValidation
+          : schemaValidation // ignore: cast_nullable_to_non_nullable
+              as DiagnosticsSeverity?,
+      trailingCommas: freezed == trailingCommas
+          ? _self.trailingCommas
+          : trailingCommas // ignore: cast_nullable_to_non_nullable
+              as DiagnosticsSeverity?,
+      comments: freezed == comments
+          ? _self.comments
+          : comments // ignore: cast_nullable_to_non_nullable
+              as DiagnosticsSeverity?,
       schemas: freezed == schemas
           ? _self.schemas
           : schemas // ignore: cast_nullable_to_non_nullable
@@ -5756,7 +5821,14 @@ extension JsonDiagnosticsOptionsPatterns on JsonDiagnosticsOptions {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(bool? allowComments, bool? enableSchemaRequest,
+    TResult Function(
+            bool? allowComments,
+            bool? enableSchemaRequest,
+            bool? validate,
+            DiagnosticsSeverity? schemaRequest,
+            DiagnosticsSeverity? schemaValidation,
+            DiagnosticsSeverity? trailingCommas,
+            DiagnosticsSeverity? comments,
             List<JsonDiagnosticsSchema>? schemas)?
         $default, {
     required TResult orElse(),
@@ -5765,7 +5837,14 @@ extension JsonDiagnosticsOptionsPatterns on JsonDiagnosticsOptions {
     switch (_that) {
       case _JsonDiagnosticsOptions() when $default != null:
         return $default(
-            _that.allowComments, _that.enableSchemaRequest, _that.schemas);
+            _that.allowComments,
+            _that.enableSchemaRequest,
+            _that.validate,
+            _that.schemaRequest,
+            _that.schemaValidation,
+            _that.trailingCommas,
+            _that.comments,
+            _that.schemas);
       case _:
         return orElse();
     }
@@ -5786,7 +5865,14 @@ extension JsonDiagnosticsOptionsPatterns on JsonDiagnosticsOptions {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(bool? allowComments, bool? enableSchemaRequest,
+    TResult Function(
+            bool? allowComments,
+            bool? enableSchemaRequest,
+            bool? validate,
+            DiagnosticsSeverity? schemaRequest,
+            DiagnosticsSeverity? schemaValidation,
+            DiagnosticsSeverity? trailingCommas,
+            DiagnosticsSeverity? comments,
             List<JsonDiagnosticsSchema>? schemas)
         $default,
   ) {
@@ -5794,7 +5880,14 @@ extension JsonDiagnosticsOptionsPatterns on JsonDiagnosticsOptions {
     switch (_that) {
       case _JsonDiagnosticsOptions():
         return $default(
-            _that.allowComments, _that.enableSchemaRequest, _that.schemas);
+            _that.allowComments,
+            _that.enableSchemaRequest,
+            _that.validate,
+            _that.schemaRequest,
+            _that.schemaValidation,
+            _that.trailingCommas,
+            _that.comments,
+            _that.schemas);
     }
   }
 
@@ -5812,7 +5905,14 @@ extension JsonDiagnosticsOptionsPatterns on JsonDiagnosticsOptions {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(bool? allowComments, bool? enableSchemaRequest,
+    TResult? Function(
+            bool? allowComments,
+            bool? enableSchemaRequest,
+            bool? validate,
+            DiagnosticsSeverity? schemaRequest,
+            DiagnosticsSeverity? schemaValidation,
+            DiagnosticsSeverity? trailingCommas,
+            DiagnosticsSeverity? comments,
             List<JsonDiagnosticsSchema>? schemas)?
         $default,
   ) {
@@ -5820,7 +5920,14 @@ extension JsonDiagnosticsOptionsPatterns on JsonDiagnosticsOptions {
     switch (_that) {
       case _JsonDiagnosticsOptions() when $default != null:
         return $default(
-            _that.allowComments, _that.enableSchemaRequest, _that.schemas);
+            _that.allowComments,
+            _that.enableSchemaRequest,
+            _that.validate,
+            _that.schemaRequest,
+            _that.schemaValidation,
+            _that.trailingCommas,
+            _that.comments,
+            _that.schemas);
       case _:
         return null;
     }
@@ -5833,6 +5940,11 @@ class _JsonDiagnosticsOptions extends JsonDiagnosticsOptions {
   const _JsonDiagnosticsOptions(
       {this.allowComments,
       this.enableSchemaRequest,
+      this.validate,
+      this.schemaRequest,
+      this.schemaValidation,
+      this.trailingCommas,
+      this.comments,
       final List<JsonDiagnosticsSchema>? schemas})
       : _schemas = schemas,
         super._();
@@ -5844,6 +5956,28 @@ class _JsonDiagnosticsOptions extends JsonDiagnosticsOptions {
   /// If set, the schema service would load schema content on-demand with 'fetch' if available
   @override
   final bool? enableSchemaRequest;
+
+  /// If set, the schema service would validate schemas and report errors.
+  @override
+  final bool? validate;
+
+  /// The severity level to use for schema request errors (e.g., if a schema fails to load).
+  /// Defaults to `warning` if not specified.
+  @override
+  final DiagnosticsSeverity? schemaRequest;
+
+  /// The severity level to use for schema validation errors, `ignore` will disable validation.
+  /// Defaults to `warning` if not specified.
+  @override
+  final DiagnosticsSeverity? schemaValidation;
+
+  /// The severity level to use for trailing comma errors. Defaults to `error` if not specified.
+  @override
+  final DiagnosticsSeverity? trailingCommas;
+
+  /// The severity level to use for comments if `allowComments` is `true`. Defaults to `info` if not specified.
+  @override
+  final DiagnosticsSeverity? comments;
 
   /// A list of known schemas and/or associations of schemas to file names.
   final List<JsonDiagnosticsSchema>? _schemas;
@@ -5876,16 +6010,34 @@ class _JsonDiagnosticsOptions extends JsonDiagnosticsOptions {
                 other.allowComments == allowComments) &&
             (identical(other.enableSchemaRequest, enableSchemaRequest) ||
                 other.enableSchemaRequest == enableSchemaRequest) &&
+            (identical(other.validate, validate) ||
+                other.validate == validate) &&
+            (identical(other.schemaRequest, schemaRequest) ||
+                other.schemaRequest == schemaRequest) &&
+            (identical(other.schemaValidation, schemaValidation) ||
+                other.schemaValidation == schemaValidation) &&
+            (identical(other.trailingCommas, trailingCommas) ||
+                other.trailingCommas == trailingCommas) &&
+            (identical(other.comments, comments) ||
+                other.comments == comments) &&
             const DeepCollectionEquality().equals(other._schemas, _schemas));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, allowComments,
-      enableSchemaRequest, const DeepCollectionEquality().hash(_schemas));
+  int get hashCode => Object.hash(
+      runtimeType,
+      allowComments,
+      enableSchemaRequest,
+      validate,
+      schemaRequest,
+      schemaValidation,
+      trailingCommas,
+      comments,
+      const DeepCollectionEquality().hash(_schemas));
 
   @override
   String toString() {
-    return 'JsonDiagnosticsOptions(allowComments: $allowComments, enableSchemaRequest: $enableSchemaRequest, schemas: $schemas)';
+    return 'JsonDiagnosticsOptions(allowComments: $allowComments, enableSchemaRequest: $enableSchemaRequest, validate: $validate, schemaRequest: $schemaRequest, schemaValidation: $schemaValidation, trailingCommas: $trailingCommas, comments: $comments, schemas: $schemas)';
   }
 }
 
@@ -5900,6 +6052,11 @@ abstract mixin class _$JsonDiagnosticsOptionsCopyWith<$Res>
   $Res call(
       {bool? allowComments,
       bool? enableSchemaRequest,
+      bool? validate,
+      DiagnosticsSeverity? schemaRequest,
+      DiagnosticsSeverity? schemaValidation,
+      DiagnosticsSeverity? trailingCommas,
+      DiagnosticsSeverity? comments,
       List<JsonDiagnosticsSchema>? schemas});
 }
 
@@ -5918,6 +6075,11 @@ class __$JsonDiagnosticsOptionsCopyWithImpl<$Res>
   $Res call({
     Object? allowComments = freezed,
     Object? enableSchemaRequest = freezed,
+    Object? validate = freezed,
+    Object? schemaRequest = freezed,
+    Object? schemaValidation = freezed,
+    Object? trailingCommas = freezed,
+    Object? comments = freezed,
     Object? schemas = freezed,
   }) {
     return _then(_JsonDiagnosticsOptions(
@@ -5929,6 +6091,26 @@ class __$JsonDiagnosticsOptionsCopyWithImpl<$Res>
           ? _self.enableSchemaRequest
           : enableSchemaRequest // ignore: cast_nullable_to_non_nullable
               as bool?,
+      validate: freezed == validate
+          ? _self.validate
+          : validate // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      schemaRequest: freezed == schemaRequest
+          ? _self.schemaRequest
+          : schemaRequest // ignore: cast_nullable_to_non_nullable
+              as DiagnosticsSeverity?,
+      schemaValidation: freezed == schemaValidation
+          ? _self.schemaValidation
+          : schemaValidation // ignore: cast_nullable_to_non_nullable
+              as DiagnosticsSeverity?,
+      trailingCommas: freezed == trailingCommas
+          ? _self.trailingCommas
+          : trailingCommas // ignore: cast_nullable_to_non_nullable
+              as DiagnosticsSeverity?,
+      comments: freezed == comments
+          ? _self.comments
+          : comments // ignore: cast_nullable_to_non_nullable
+              as DiagnosticsSeverity?,
       schemas: freezed == schemas
           ? _self._schemas
           : schemas // ignore: cast_nullable_to_non_nullable

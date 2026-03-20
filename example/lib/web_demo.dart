@@ -332,12 +332,15 @@ MonacoEditor(
   }
 
   Future<void> _registerJsonDiagnostics(MonacoController controller) async {
-    await controller.setJsonDiagnostics(
-        JsonDiagnosticsOptions(allowComments: true, schemas: [
-      JsonDiagnosticsSchema(
-          uri: Uri.parse("https://example.com/schema.json"),
-          fileMatch: ["**"],
-          schema: jsonDecode("""
+    await controller.setJsonDiagnostics(JsonDiagnosticsOptions(
+        allowComments: true,
+        trailingCommas: DiagnosticsSeverity.warning,
+        schemaValidation: DiagnosticsSeverity.error,
+        schemas: [
+          JsonDiagnosticsSchema(
+              uri: Uri.parse("https://example.com/schema.json"),
+              fileMatch: ["*"],
+              schema: jsonDecode("""
 {
   "\$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Example Schema",
@@ -422,7 +425,7 @@ MonacoEditor(
     }
     }
 } """))
-    ]));
+        ]));
   }
 
   Future<void> _registerCompletions(MonacoController controller) async {

@@ -25,8 +25,10 @@ enum MonacoTheme {
   /// Creates a [MonacoTheme] from its string [id].
   ///
   /// If the [id] is not found, returns [orElse].
-  static MonacoTheme fromId(String? id,
-      {MonacoTheme orElse = MonacoTheme.vsDark}) {
+  static MonacoTheme fromId(
+    String? id, {
+    MonacoTheme orElse = MonacoTheme.vsDark,
+  }) {
     if (id == null) return orElse;
     return MonacoTheme.values.firstWhere(
       (t) => t.id == id,
@@ -304,8 +306,10 @@ enum MonacoLanguage {
   /// Creates a [MonacoLanguage] from its string [id].
   ///
   /// If the [id] is not found, returns [orElse].
-  static MonacoLanguage fromId(String? id,
-      {MonacoLanguage orElse = MonacoLanguage.markdown}) {
+  static MonacoLanguage fromId(
+    String? id, {
+    MonacoLanguage orElse = MonacoLanguage.markdown,
+  }) {
     if (id == null) return orElse;
     return MonacoLanguage.values.firstWhere(
       (l) => l.id == id,
@@ -342,8 +346,10 @@ enum CursorBlinking {
   /// Creates a [CursorBlinking] style from its string [id].
   ///
   /// If the [id] is not found, returns [orElse].
-  static CursorBlinking fromId(String? id,
-      {CursorBlinking orElse = CursorBlinking.blink}) {
+  static CursorBlinking fromId(
+    String? id, {
+    CursorBlinking orElse = CursorBlinking.blink,
+  }) {
     if (id == null) return orElse;
     return CursorBlinking.values.firstWhere(
       (c) => c.id == id,
@@ -383,8 +389,10 @@ enum CursorStyle {
   /// Creates a [CursorStyle] from its string [id].
   ///
   /// If the [id] is not found, returns [orElse].
-  static CursorStyle fromId(String? id,
-      {CursorStyle orElse = CursorStyle.line}) {
+  static CursorStyle fromId(
+    String? id, {
+    CursorStyle orElse = CursorStyle.line,
+  }) {
     if (id == null) return orElse;
     return CursorStyle.values.firstWhere(
       (c) => c.id == id,
@@ -421,8 +429,10 @@ enum RenderWhitespace {
   /// Creates a [RenderWhitespace] option from its string [id].
   ///
   /// If the [id] is not found, returns [orElse].
-  static RenderWhitespace fromId(String? id,
-      {RenderWhitespace orElse = RenderWhitespace.selection}) {
+  static RenderWhitespace fromId(
+    String? id, {
+    RenderWhitespace orElse = RenderWhitespace.selection,
+  }) {
     if (id == null) return orElse;
     return RenderWhitespace.values.firstWhere(
       (r) => r.id == id,
@@ -456,8 +466,10 @@ enum AutoClosingBehavior {
   /// Creates an [AutoClosingBehavior] from its string [id].
   ///
   /// If the [id] is not found, returns [orElse].
-  static AutoClosingBehavior fromId(String? id,
-      {AutoClosingBehavior orElse = AutoClosingBehavior.languageDefined}) {
+  static AutoClosingBehavior fromId(
+    String? id, {
+    AutoClosingBehavior orElse = AutoClosingBehavior.languageDefined,
+  }) {
     if (id == null) return orElse;
     return AutoClosingBehavior.values.firstWhere(
       (a) => a.id == id,
@@ -507,4 +519,31 @@ enum MonacoFont {
 
   /// Returns a list of all available font family strings.
   static List<String> get all => MonacoFont.values.map((f) => f.value).toList();
+}
+
+/// Defines the severity levels for diagnostics (errors, warnings, etc.) in the editor.
+enum DiagnosticsSeverity {
+  /// Error severity level, typically marked with a red squiggly line.
+  error('error'),
+
+  /// Warning severity level, typically marked with a yellow squiggly line.
+  warning('warning'),
+
+  /// Ignored severity level, where diagnostics are not shown.
+  ignore('ignore');
+
+  /// The string value used by the Monaco Editor to represent this severity level.
+  final String id;
+
+  const DiagnosticsSeverity(this.id);
+
+  /// Creates a [DiagnosticsSeverity] from its string [id].
+  static DiagnosticsSeverity fromId(String? id,
+      {DiagnosticsSeverity orElse = DiagnosticsSeverity.warning}) {
+    if (id == null) return orElse;
+    return DiagnosticsSeverity.values.firstWhere(
+      (s) => s.id == id,
+      orElse: () => orElse,
+    );
+  }
 }

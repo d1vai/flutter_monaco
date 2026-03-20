@@ -1,4 +1,5 @@
 import 'package:convert_object/convert_object.dart';
+import 'package:flutter_monaco/flutter_monaco.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'monaco_types.freezed.dart';
@@ -1136,6 +1137,25 @@ sealed class JsonDiagnosticsOptions with _$JsonDiagnosticsOptions {
     /// If set, the schema service would load schema content on-demand with 'fetch' if available
     bool? enableSchemaRequest,
 
+    /// If set, the schema service would validate schemas and report errors.
+    bool? validate,
+
+    /// The severity level to use for schema request errors (e.g., if a schema fails to load).
+    /// Internally defaults to `warning` if not specified.
+    DiagnosticsSeverity? schemaRequest,
+
+    /// The severity level to use for schema validation errors, `ignore` will disable validation.
+    /// Internally defaults to `warning` if not specified.
+    DiagnosticsSeverity? schemaValidation,
+
+    /// The severity level to use for trailing comma errors.
+    /// Internally defaults to `error` if not specified.
+    DiagnosticsSeverity? trailingCommas,
+
+    /// The severity level to use for comments if `allowComments` is `true`.
+    /// Internally defaults to `error` if not specified and will override `allowComments`.
+    DiagnosticsSeverity? comments,
+
     /// A list of known schemas and/or associations of schemas to file names.
     List<JsonDiagnosticsSchema>? schemas,
   }) = _JsonDiagnosticsOptions;
@@ -1146,7 +1166,16 @@ sealed class JsonDiagnosticsOptions with _$JsonDiagnosticsOptions {
   factory JsonDiagnosticsOptions.fromJson(Map<String, dynamic> json) {
     return JsonDiagnosticsOptions(
       allowComments: json.tryGetBool('allowComments'),
+      validate: json.tryGetBool('validate'),
       enableSchemaRequest: json.tryGetBool('enableSchemaRequest'),
+      schemaRequest:
+          json.tryGetString('schemaRequest')?.let(DiagnosticsSeverity.fromId),
+      comments: json.tryGetString('comments')?.let(DiagnosticsSeverity.fromId),
+      schemaValidation: json
+          .tryGetString('schemaValidation')
+          ?.let(DiagnosticsSeverity.fromId),
+      trailingCommas:
+          json.tryGetString('trailingCommas')?.let(DiagnosticsSeverity.fromId),
       schemas: json
           .tryGetList<Map<String, dynamic>>('schemas')
           ?.map(JsonDiagnosticsSchema.fromJson)
@@ -1156,11 +1185,16 @@ sealed class JsonDiagnosticsOptions with _$JsonDiagnosticsOptions {
 
   /// Converts the diagnostic options to a JSON-compatible map.
   Map<String, dynamic> toJson() => {
+        if (validate != null) 'validate': validate,
         if (allowComments != null) 'allowComments': allowComments,
         if (enableSchemaRequest != null)
           'enableSchemaRequest': enableSchemaRequest,
         if (schemas != null && schemas!.isNotEmpty)
           'schemas': schemas!.map((schema) => schema.toJson()).toList(),
+        if (schemaRequest != null) 'schemaRequest': schemaRequest!.id,
+        if (schemaValidation != null) 'schemaValidation': schemaValidation!.id,
+        if (comments != null) 'comments': comments!.id,
+        if (trailingCommas != null) 'trailingCommas': trailingCommas!.id,
       };
 }
 
@@ -1170,7 +1204,13 @@ sealed class JsonDiagnosticsSchema with _$JsonDiagnosticsSchema {
   const factory JsonDiagnosticsSchema({
     /// The URI of the schema to validate against.
     required Uri uri,
+
+    /// A list of patterns to match the model uri against. Use '*' if the schema
+    /// should apply to all models, otherwise make sure to use meaningful
+    /// uris for model creation that can be matched.
     List<String>? fileMatch,
+
+    /// The json schema definition itself.
     Map<String, dynamic>? schema,
   }) = _JsonDiagnosticsSchema;
 
