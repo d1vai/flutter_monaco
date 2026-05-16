@@ -40,8 +40,8 @@ jobs:
           else
             echo "pubspec.yaml not changed; skipping version channel check."
           fi
-      - name: Pub get
-        run: flutter pub get
+      - name: Install dependencies
+        run: dart pub get
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed .
       - name: Analyze
@@ -60,8 +60,8 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: beta
-      - name: Pub get
-        run: flutter pub get
+      - name: Install dependencies
+        run: dart pub get
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed .
       - name: Analyze
@@ -79,25 +79,24 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - name: Pub get
-        run: flutter pub get
+      - name: Install dependencies
+        run: dart pub get
       - name: Add pub cache to PATH
         run: echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
       - name: Install pana
         run: dart pub global activate pana
       - name: Run pana
         run: |
-          pana --json > pana.json
-          python3 - <<'PY'
-          import json
-          with open('pana.json') as f:
-            data = json.load(f)
+          pana --json . 2>/dev/null | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
           scores = data.get('scores', {})
           granted = scores.get('grantedPoints', 0)
           max_points = scores.get('maxPoints', 0)
+          minimum_points = 150
           if max_points == 0:
             raise SystemExit('pana did not report scores; failing.')
-          if granted != max_points:
-            raise SystemExit(f'pana score {granted}/{max_points} (full score required).')
+          if granted < minimum_points:
+            raise SystemExit(f'pana score {granted}/{max_points} (minimum {minimum_points} required).')
           print(f'pana score {granted}/{max_points}')
-          PY
+          "

@@ -1058,6 +1058,60 @@ void main() {
       });
     });
 
+    group('setJsonDiagnostics', () {
+      test('waits for ready before executing', () async {
+        final bundle = await _createBundle(ready: false);
+        final future = bundle.controller.setJsonDiagnostics(
+          const JsonDiagnosticsOptions(validate: true),
+        );
+        expect(bundle.webview.executed, isEmpty);
+        bundle.controller.completeReadyForTesting();
+        await future;
+        expect(
+          bundle.webview.hasExecuted('setJsonDiagnosticsOptions'),
+          true,
+        );
+      });
+
+      test('generates correct JS payload', () async {
+        final bundle = await _createBundle();
+        await bundle.controller.setJsonDiagnostics(
+          JsonDiagnosticsOptions(
+            validate: true,
+            allowComments: true,
+            schemaValidation: DiagnosticsSeverity.error,
+            trailingCommas: DiagnosticsSeverity.warning,
+            schemas: [
+              JsonDiagnosticsSchema(
+                uri: Uri.parse('https://example.com/schema.json'),
+                fileMatch: ['*'],
+              ),
+            ],
+          ),
+        );
+
+        final joined = bundle.webview.executed.join('\n');
+        expect(joined, contains('setJsonDiagnosticsOptions'));
+        expect(joined, contains('"validate":true'));
+        expect(joined, contains('"allowComments":true'));
+        expect(joined, contains('"schemaValidation":"error"'));
+        expect(joined, contains('"trailingCommas":"warning"'));
+        expect(joined, contains('"uri":"https://example.com/schema.json"'));
+        expect(joined, contains('"fileMatch":["*"]'));
+      });
+
+      test('propagates JavaScript errors', () async {
+        final bundle = await _createBundle();
+        bundle.webview.throwOnContains('setJsonDiagnosticsOptions');
+        expect(
+          () => bundle.controller.setJsonDiagnostics(
+            const JsonDiagnosticsOptions(validate: true),
+          ),
+          throwsA(isA<StateError>()),
+        );
+      });
+    });
+
     group('runJavaScript', () {
       test('executes script after ready', () async {
         final bundle = await _createBundle();

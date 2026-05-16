@@ -13,6 +13,8 @@ void main() {
         AutoClosingBehavior.fromId('unknown'),
         AutoClosingBehavior.languageDefined,
       );
+      expect(
+          DiagnosticsSeverity.fromId('unknown'), DiagnosticsSeverity.warning);
     });
 
     test('ids match expected values', () {
@@ -22,6 +24,7 @@ void main() {
       expect(CursorStyle.block.id, 'block');
       expect(RenderWhitespace.all.id, 'all');
       expect(AutoClosingBehavior.never.id, 'never');
+      expect(DiagnosticsSeverity.error.id, 'error');
     });
   });
 }

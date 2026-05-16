@@ -499,6 +499,57 @@ final uri = await controller.createModel(
 await controller.setModel(uri);
 ```
 
+### JSON Diagnostics
+
+Enable schema-based validation for JSON content. Monaco will show inline errors and warnings based on the schemas you provide:
+
+```dart
+void _onEditorReady(MonacoController controller) {
+  controller.setJsonDiagnostics(JsonDiagnosticsOptions(
+    validate: true,
+    allowComments: true,
+    trailingCommas: DiagnosticsSeverity.warning,
+    schemaValidation: DiagnosticsSeverity.error,
+    schemas: [
+      JsonDiagnosticsSchema(
+        uri: Uri.parse('https://example.com/my-schema.json'),
+        fileMatch: ['*'],
+        schema: {
+          'type': 'object',
+          'properties': {
+            'name': {'type': 'string'},
+            'version': {'type': 'integer'},
+          },
+          'required': ['name'],
+        },
+      ),
+    ],
+  ));
+}
+```
+
+**DiagnosticsSeverity** values:
+- `DiagnosticsSeverity.error` - Red squiggly underline
+- `DiagnosticsSeverity.warning` - Yellow squiggly underline
+- `DiagnosticsSeverity.ignore` - Suppress diagnostics
+
+**Options reference:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `validate` | `bool?` | Enable schema validation |
+| `allowComments` | `bool?` | Tolerate comments in JSON |
+| `enableSchemaRequest` | `bool?` | Load remote schemas on demand via `fetch` |
+| `schemaValidation` | `DiagnosticsSeverity?` | Severity for schema validation errors |
+| `schemaRequest` | `DiagnosticsSeverity?` | Severity for schema fetch failures |
+| `trailingCommas` | `DiagnosticsSeverity?` | Severity for trailing commas |
+| `comments` | `DiagnosticsSeverity?` | Severity for comments (overrides `allowComments`) |
+| `schemas` | `List<JsonDiagnosticsSchema>?` | Schema definitions and file associations |
+
+**Note on `fileMatch`:** Patterns match against the Monaco model URI, not file paths. Use `['*']` to apply a schema to all JSON models, or set a meaningful model URI when calling `controller.createModel()`.
+
+**Note on `enableSchemaRequest`:** Remote schema fetching requires the schema host to be allowed by the Content Security Policy. The default CSP uses `connect-src 'self' blob:`, which blocks external hosts. This package does not currently expose a public API for adding external hosts to `connect-src`, so prefer inline `schema` maps or schemas hosted where the current CSP already permits requests.
+
 ### EditorOptions
 
 Configure the editor appearance and behavior with type-safe enums:

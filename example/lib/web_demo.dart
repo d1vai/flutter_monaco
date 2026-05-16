@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
@@ -326,6 +328,104 @@ MonacoEditor(
   void _onEditorReady(MonacoController controller) {
     setState(() => _controller = controller);
     _registerCompletions(controller);
+    _registerJsonDiagnostics(controller);
+  }
+
+  Future<void> _registerJsonDiagnostics(MonacoController controller) async {
+    await controller.setJsonDiagnostics(JsonDiagnosticsOptions(
+        allowComments: true,
+        trailingCommas: DiagnosticsSeverity.warning,
+        schemaValidation: DiagnosticsSeverity.error,
+        schemas: [
+          JsonDiagnosticsSchema(
+              uri: Uri.parse("https://example.com/schema.json"),
+              fileMatch: ["*"],
+              schema: jsonDecode("""
+{
+  "\$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Example Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of the application"
+    },
+    "version": {
+      "type": "string",
+      "description": "The version of the application"
+    },
+    "description": {
+      "type": "string",
+      "description": "A brief description of the application"
+    },
+    "platforms": {
+      "type": "object",
+      "properties": {
+        "web": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable web platform support"
+            }
+          },
+          "required": ["enabled"]
+        },
+        "desktop": {
+          "type": "object",
+          "properties": {
+            "platforms": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["macos", "windows", "linux"]
+              },
+              "description": "Supported desktop platforms"
+            }
+          },
+          "required": ["platforms"]
+        },
+        "mobile": {
+          "type": "object",
+          "properties": {
+            "platforms": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["android", "ios"]
+              },
+              "description": "Supported mobile platforms"
+            }
+          },
+          "required": ["platforms"]
+        }
+      },
+      "required": ["web", "desktop", "mobile"]
+    },
+    
+    "editor": {
+      "type": "object",
+      "properties": {
+        "defaultTheme": {
+          "type": "string",
+          "enum": ["vs-dark", "vs", "hc-black"],
+          "description": "Default theme for the editor"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["syntaxHighlighting", "intellisense", "formatting"]
+          },
+          "description": "Enabled editor features"
+        }
+      },
+      "required": ["defaultTheme", "features"]
+    }
+    }
+} """))
+        ]));
   }
 
   Future<void> _registerCompletions(MonacoController controller) async {

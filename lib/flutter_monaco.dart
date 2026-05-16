@@ -55,10 +55,12 @@
 library;
 
 export 'src/core/monaco_actions.dart' show MonacoAction;
+
 // Core exports
 export 'src/core/monaco_assets.dart' show MonacoAssets;
 export 'src/core/monaco_constants.dart' show MonacoConstants;
 export 'src/core/monaco_controller.dart' show MonacoController;
+
 // Model exports
 export 'src/models/editor_options.dart' show EditorOptions;
 export 'src/models/monaco_enums.dart'
@@ -69,7 +71,8 @@ export 'src/models/monaco_enums.dart'
         MonacoFont,
         MonacoLanguage,
         MonacoTheme,
-        RenderWhitespace;
+        RenderWhitespace,
+        DiagnosticsSeverity;
 export 'src/models/monaco_types.dart'
     show
         CompletionItem,
@@ -87,7 +90,10 @@ export 'src/models/monaco_types.dart'
         MarkerSeverity,
         Position,
         Range,
-        RelatedInformation;
+        RelatedInformation,
+        JsonDiagnosticsOptions,
+        JsonDiagnosticsSchema;
+
 // Widget exports
 export 'src/widgets/monaco_editor_view.dart' show MonacoEditor;
 export 'src/widgets/monaco_focus_guard.dart' show MonacoFocusGuard;
