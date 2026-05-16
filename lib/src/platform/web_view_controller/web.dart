@@ -4,6 +4,7 @@ import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'dart:ui_web' as ui_web;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_monaco/src/core/monaco_assets.dart';
 import 'package:flutter_monaco/src/platform/platform_webview.dart';
@@ -37,7 +38,8 @@ import 'package:web/web.dart' as web;
 ///
 /// Web focus is tricky because the iframe is a separate browsing context.
 /// When Monaco reports focus events, this controller unfocuses Flutter
-/// widgets and uses `forceFocus()` to ensure Monaco retains keyboard input.
+/// widgets. Desktop web also reasserts Monaco focus while mobile web avoids
+/// amplifying accidental focus during scroll gestures.
 ///
 /// See also:
 /// - [MonacoAssets.generateIndexHtml] for HTML generation with web-specific
@@ -143,18 +145,19 @@ class WebViewController implements PlatformWebViewController {
       debugPrint('[WebViewController] Monaco ready!');
     }
 
-    // When Monaco reports focus, unfocus Flutter widgets and ensure Monaco keeps focus.
+    // When Monaco reports focus, unfocus Flutter widgets.
     // This is gated by _interactionEnabled to avoid focus stealing when interaction is disabled.
     if (_interactionEnabled &&
         (message.contains('"event":"focus"') ||
             message.contains('"event": "focus"'))) {
       // Unfocus any Flutter widget
       FocusManager.instance.primaryFocus?.unfocus();
-      // Use Monaco's forceFocus to ensure editor keeps focus
-      _iframe?.contentWindow?.callMethod(
-        'eval'.toJS,
-        'window.flutterMonaco && window.flutterMonaco.forceFocus()'.toJS,
-      );
+      if (!_isMobileInputPlatform()) {
+        _iframe?.contentWindow?.callMethod(
+          'eval'.toJS,
+          'window.flutterMonaco && window.flutterMonaco.forceFocus()'.toJS,
+        );
+      }
     }
 
     // Forward to all channels
@@ -172,6 +175,11 @@ class WebViewController implements PlatformWebViewController {
         },
       );
     }
+  }
+
+  bool _isMobileInputPlatform() {
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
   }
 
   @override

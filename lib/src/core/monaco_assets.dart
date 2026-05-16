@@ -944,12 +944,20 @@ class MonacoAssets {
                     const node = getEditorNode();
                     if (node && !node.__flutterMonacoMobileFocusBound) {
                       node.__flutterMonacoMobileFocusBound = true;
-                      const tapMoveThreshold = 12;
-                      const tapTimeThreshold = 800;
+                      const ownerDocument = node.ownerDocument || document;
+                      const ownerWindow = ownerDocument.defaultView || window;
+                      const ua = navigator.userAgent || '';
+                      const isAndroid = /Android/i.test(ua);
+                      const tapMoveThreshold = 8;
+                      const tapTimeThreshold = 650;
                       const compatibilityEventSuppressMs = 1200;
-                      let tapCandidate = null;
+                      let gesture = null;
                       let lastFocusAt = 0;
-                      let suppressClickUntil = 0;
+                      let suppressUntil = 0;
+                      const supportsPointerEvents = !!ownerWindow.PointerEvent;
+                      const usePointerTapBridge = supportsPointerEvents && isAndroid;
+                      const useTouchTapBridge = !usePointerTapBridge;
+                      const now = () => Date.now();
                       const eventPoint = (event) => {
                         const touch =
                           event.changedTouches?.[0] || event.touches?.[0];
@@ -961,95 +969,172 @@ class MonacoAssets {
                         }
                         return null;
                       };
-                      const beginTapCandidate = (event) => {
-                        const point = eventPoint(event);
-                        if (!point) return;
-                        tapCandidate = {
-                          x: point.x,
-                          y: point.y,
-                          startedAt: Date.now(),
-                          moved: false,
-                        };
-                      };
-                      const updateTapCandidate = (event) => {
-                        if (!tapCandidate) return;
-                        const point = eventPoint(event);
-                        if (!point) return;
-                        const dx = point.x - tapCandidate.x;
-                        const dy = point.y - tapCandidate.y;
-                        if ((dx * dx + dy * dy) > tapMoveThreshold * tapMoveThreshold) {
-                          tapCandidate.moved = true;
+                      const getScrollSnapshot = () => {
+                        try {
+                          const ed = E();
+                          if (!ed || !ed.getScrollTop || !ed.getScrollLeft) {
+                            return { top: 0, left: 0 };
+                          }
+                          return {
+                            top: ed.getScrollTop(),
+                            left: ed.getScrollLeft(),
+                          };
+                        } catch (_) {
+                          return { top: 0, left: 0 };
                         }
                       };
+                      const hasMovedFromStart = (event) => {
+                        if (!gesture) return false;
+                        const point = eventPoint(event);
+                        if (point) {
+                          const dx = point.x - gesture.x;
+                          const dy = point.y - gesture.y;
+                          if ((dx * dx + dy * dy) > tapMoveThreshold * tapMoveThreshold) {
+                            return true;
+                          }
+                        }
+                        const scroll = getScrollSnapshot();
+                        return Math.abs(scroll.top - gesture.scrollTop) > 0 ||
+                          Math.abs(scroll.left - gesture.scrollLeft) > 0;
+                      };
                       const blockEvent = (event) => {
-                        try { event.preventDefault && event.preventDefault(); } catch (_) {}
+                        try {
+                          if (event.cancelable && event.preventDefault) {
+                            event.preventDefault();
+                          }
+                        } catch (_) {}
                         try { event.stopImmediatePropagation && event.stopImmediatePropagation(); } catch (_) {}
                         try { event.stopPropagation && event.stopPropagation(); } catch (_) {}
                       };
-                      const suppressSyntheticClick = () => {
-                        suppressClickUntil = Date.now() + compatibilityEventSuppressMs;
+                      const suppressCompatibilityEvents = () => {
+                        suppressUntil = now() + compatibilityEventSuppressMs;
                       };
-                      const cancelTapCandidate = () => {
-                        tapCandidate = null;
-                        suppressSyntheticClick();
-                      };
-                      const focusIfTapCandidate = (event) => {
-                        if (!tapCandidate) return;
-                        updateTapCandidate(event);
-                        const elapsed = Date.now() - tapCandidate.startedAt;
-                        const shouldFocus =
-                          !tapCandidate.moved && elapsed <= tapTimeThreshold;
-                        tapCandidate = null;
-                        if (!shouldFocus) {
-                          suppressSyntheticClick();
-                          return;
-                        }
-                        const now = Date.now();
-                        if (now - lastFocusAt < 150) return;
-                        lastFocusAt = now;
-                        focusEditorTextAreaNow();
-                      };
-                      const suppressCompatibilityMouseEvent = (event) => {
-                        const now = Date.now();
-                        if (now >= suppressClickUntil) return;
+                      const suppressAndBlock = (event) => {
+                        suppressCompatibilityEvents();
                         blockEvent(event);
                       };
-                      const focusFromClick = (event) => {
-                        const now = Date.now();
-                        if (now < suppressClickUntil) {
+                      const shouldBlockSuppressedEvent = () => now() < suppressUntil;
+                      const blockSuppressedCompatibilityEvent = (event) => {
+                        if (shouldBlockSuppressedEvent()) {
                           blockEvent(event);
+                        }
+                      };
+                      const beginGesture = (event, id, kind) => {
+                        const point = eventPoint(event);
+                        if (!point) return;
+                        const scroll = getScrollSnapshot();
+                        gesture = {
+                          id,
+                          kind,
+                          x: point.x,
+                          y: point.y,
+                          startedAt: now(),
+                          moved: false,
+                          cancelled: false,
+                          scrollTop: scroll.top,
+                          scrollLeft: scroll.left,
+                        };
+                      };
+                      const updateGesture = (event, id, kind) => {
+                        if (!gesture || gesture.id !== id || gesture.kind !== kind) return;
+                        if (hasMovedFromStart(event)) {
+                          gesture.moved = true;
+                        }
+                      };
+                      const cancelGesture = (event, id, kind) => {
+                        if (!gesture || gesture.id !== id || gesture.kind !== kind) return;
+                        gesture.cancelled = true;
+                        suppressAndBlock(event);
+                        gesture = null;
+                      };
+                      const endGesture = (event, id, kind) => {
+                        if (!gesture || gesture.id !== id || gesture.kind !== kind) {
+                          if (shouldBlockSuppressedEvent()) {
+                            blockEvent(event);
+                          }
                           return;
                         }
-                        if (now - lastFocusAt < 150) return;
-                        lastFocusAt = now;
+                        updateGesture(event, id, kind);
+                        const elapsed = now() - gesture.startedAt;
+                        const shouldFocus =
+                          !gesture.cancelled &&
+                          !gesture.moved &&
+                          elapsed <= tapTimeThreshold;
+                        gesture = null;
+                        if (!shouldFocus) {
+                          suppressAndBlock(event);
+                          return;
+                        }
+                        suppressUntil = 0;
+                        const currentTime = now();
+                        if (currentTime - lastFocusAt < 150) return;
+                        lastFocusAt = currentTime;
                         focusEditorTextAreaNow();
                       };
-                      node.addEventListener('pointerdown', beginTapCandidate, { capture: true });
-                      node.addEventListener('pointermove', updateTapCandidate, {
-                        capture: true,
-                        passive: true,
-                      });
-                      node.addEventListener('pointerup', focusIfTapCandidate, { capture: true });
-                      node.addEventListener('pointercancel', cancelTapCandidate, { capture: true });
-                      node.addEventListener('touchstart', beginTapCandidate, {
-                        capture: true,
-                        passive: true,
-                      });
-                      node.addEventListener('touchmove', updateTapCandidate, {
-                        capture: true,
-                        passive: true,
-                      });
-                      node.addEventListener('touchend', focusIfTapCandidate, {
-                        capture: true,
-                        passive: true,
-                      });
-                      node.addEventListener('touchcancel', cancelTapCandidate, {
-                        capture: true,
-                        passive: true,
-                      });
-                      node.addEventListener('mousedown', suppressCompatibilityMouseEvent, { capture: true });
-                      node.addEventListener('mouseup', suppressCompatibilityMouseEvent, { capture: true });
-                      node.addEventListener('click', focusFromClick, { capture: true });
+                      const pointerId = (event) =>
+                        typeof event.pointerId === 'number' ? event.pointerId : 1;
+                      const onPointerDown = (event) => {
+                        if (!event.isPrimary || event.pointerType !== 'touch') return;
+                        beginGesture(event, pointerId(event), 'pointer');
+                      };
+                      const onPointerMove = (event) => {
+                        if (!event.isPrimary || event.pointerType !== 'touch') return;
+                        updateGesture(event, pointerId(event), 'pointer');
+                      };
+                      const onPointerUp = (event) => {
+                        if (!event.isPrimary || event.pointerType !== 'touch') return;
+                        endGesture(event, pointerId(event), 'pointer');
+                      };
+                      const onPointerCancel = (event) => {
+                        if (!event.isPrimary || event.pointerType !== 'touch') return;
+                        cancelGesture(event, pointerId(event), 'pointer');
+                      };
+                      const firstChangedTouch = (event) => event.changedTouches?.[0] || null;
+                      const firstActiveTouch = (event) => event.touches?.[0] || null;
+                      const onTouchStart = (event) => {
+                        const touch = firstActiveTouch(event) || firstChangedTouch(event);
+                        if (!touch) return;
+                        beginGesture(event, touch.identifier, 'touch');
+                      };
+                      const onTouchMove = (event) => {
+                        const touch = firstChangedTouch(event) || firstActiveTouch(event);
+                        if (!touch) return;
+                        updateGesture(event, touch.identifier, 'touch');
+                      };
+                      const onTouchEnd = (event) => {
+                        const touch = firstChangedTouch(event);
+                        if (!touch) return;
+                        endGesture(event, touch.identifier, 'touch');
+                      };
+                      const onTouchCancel = (event) => {
+                        const touch = firstChangedTouch(event);
+                        if (!touch) return;
+                        cancelGesture(event, touch.identifier, 'touch');
+                      };
+                      const capturePassiveFalse = { capture: true, passive: false };
+                      const capturePassiveTrue = { capture: true, passive: true };
+                      const captureOnly = { capture: true };
+
+                      if (usePointerTapBridge) {
+                        ownerDocument.addEventListener('pointerdown', onPointerDown, captureOnly);
+                        ownerDocument.addEventListener('pointermove', onPointerMove, capturePassiveFalse);
+                        ownerDocument.addEventListener('pointerup', onPointerUp, capturePassiveFalse);
+                        ownerDocument.addEventListener('pointercancel', onPointerCancel, capturePassiveFalse);
+                      }
+
+                      if (useTouchTapBridge) {
+                        ownerDocument.addEventListener('touchstart', onTouchStart, capturePassiveTrue);
+                        ownerDocument.addEventListener('touchmove', onTouchMove, capturePassiveFalse);
+                        ownerDocument.addEventListener('touchend', onTouchEnd, capturePassiveFalse);
+                        ownerDocument.addEventListener('touchcancel', onTouchCancel, capturePassiveFalse);
+                      }
+
+                      ownerDocument.addEventListener('mousedown', blockSuppressedCompatibilityEvent, captureOnly);
+                      ownerDocument.addEventListener('mouseup', blockSuppressedCompatibilityEvent, captureOnly);
+                      ownerDocument.addEventListener('click', blockSuppressedCompatibilityEvent, captureOnly);
+                      try {
+                        node.style.touchAction = node.style.touchAction || 'manipulation';
+                      } catch (_) {}
                     }
                   } catch (_) {}
                 }

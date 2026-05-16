@@ -310,6 +310,68 @@ void main() {
       });
     });
 
+    group('mobile input wrapper policy', () {
+      final monacoFocusWrapper = find.byWidgetPredicate(
+        (widget) =>
+            widget is Focus &&
+            widget.focusNode?.debugLabel == 'MonacoWebViewFocus',
+      );
+      final monacoPointerWrapper = find.byWidgetPredicate(
+        (widget) =>
+            widget is Listener &&
+            widget.behavior == HitTestBehavior.translucent,
+      );
+
+      testWidgets('mobile renders bare webview without focus wrappers',
+          (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          final bundle = await _createBundle();
+          await tester.pumpWidget(_wrap(MonacoEditor(
+            controller: bundle.controller,
+          )));
+          await tester.pumpAndSettle();
+
+          final webview = find.byKey(const Key('webview'));
+          expect(webview, findsOneWidget);
+          expect(
+            find.ancestor(of: webview, matching: monacoFocusWrapper),
+            findsNothing,
+          );
+          expect(
+            find.ancestor(of: webview, matching: monacoPointerWrapper),
+            findsNothing,
+          );
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('desktop keeps focus wrappers', (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+        try {
+          final bundle = await _createBundle();
+          await tester.pumpWidget(_wrap(MonacoEditor(
+            controller: bundle.controller,
+          )));
+          await tester.pumpAndSettle();
+
+          final webview = find.byKey(const Key('webview'));
+          expect(webview, findsOneWidget);
+          expect(
+            find.ancestor(of: webview, matching: monacoFocusWrapper),
+            findsOneWidget,
+          );
+          expect(
+            find.ancestor(of: webview, matching: monacoPointerWrapper),
+            findsOneWidget,
+          );
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+    });
+
     group('content change callbacks', () {
       testWidgets('onContentChanged debounces non-flush events',
           (tester) async {

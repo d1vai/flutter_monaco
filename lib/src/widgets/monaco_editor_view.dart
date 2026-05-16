@@ -339,15 +339,9 @@ class _MonacoEditorState extends State<MonacoEditor> {
           return;
         }
       }
-      // On mobile native, programmatic autofocus without a user gesture
-      // will never produce a keyboard - skip it entirely.
-      final isMobileNativeBootstrap = !kIsWeb &&
-          (defaultTargetPlatform == TargetPlatform.android ||
-              defaultTargetPlatform == TargetPlatform.iOS);
-
       if (widget.autofocus &&
           widget.interactionEnabled &&
-          !isMobileNativeBootstrap) {
+          !_isMobileInputPlatform()) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!_isBootstrapCurrent(bootstrapToken)) return;
           _webFocusNode.requestFocus();
@@ -373,6 +367,11 @@ class _MonacoEditorState extends State<MonacoEditor> {
   }
 
   bool _isBootstrapCurrent(int token) => mounted && token == _bootstrapSeq;
+
+  bool _isMobileInputPlatform() {
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
 
   /// Subscribes to all relevant event streams from the controller.
   void _wireListeners() {
@@ -495,15 +494,13 @@ class _MonacoEditorState extends State<MonacoEditor> {
       return widget.loadingBuilder?.call(context) ?? const _DefaultLoading();
     }
 
-    // On mobile native, let the WebView own the full tap-to-keyboard chain.
+    // On mobile, let the WebView own the full tap-to-keyboard chain.
     // Flutter's Focus/Listener wrapper steals the gesture context, which
     // causes the OS to refuse the soft keyboard.
-    final isMobileNative = !kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS);
+    final isMobileInputPlatform = _isMobileInputPlatform();
 
     final Widget webView;
-    if (isMobileNative) {
+    if (isMobileInputPlatform) {
       webView = SizedBox.expand(child: _controller!.webViewWidget);
     } else {
       webView = SizedBox.expand(

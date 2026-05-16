@@ -101,30 +101,48 @@ void main() {
       expect(html, contains("navigator.platform === 'MacIntel'"));
       expect(html, contains('navigator.maxTouchPoints > 1'));
       expect(html, contains('const focusEditorTextAreaNow = () =>'));
-      expect(html, contains('const tapMoveThreshold = 12'));
+      expect(html, contains('const ownerDocument = node.ownerDocument'));
+      expect(html, contains('const ownerWindow = ownerDocument.defaultView'));
+      expect(html, contains('const isAndroid = /Android/i.test(ua)'));
+      expect(html, contains('const tapMoveThreshold = 8'));
+      expect(html, contains('const tapTimeThreshold = 650'));
       expect(html, contains('const compatibilityEventSuppressMs = 1200'));
-      expect(html, contains('const beginTapCandidate = (event) =>'));
-      expect(html, contains('const updateTapCandidate = (event) =>'));
+      expect(html, contains('const usePointerTapBridge ='));
+      expect(html, contains('supportsPointerEvents && isAndroid'));
+      expect(html, contains('const useTouchTapBridge = !usePointerTapBridge'));
+      expect(html, contains('const getScrollSnapshot = () =>'));
+      expect(html, contains('ed.getScrollTop'));
+      expect(html, contains('ed.getScrollLeft'));
+      expect(html, contains('const hasMovedFromStart = (event) =>'));
       expect(html, contains('const blockEvent = (event) =>'));
-      expect(html, contains('let suppressClickUntil = 0'));
-      expect(html, contains('const suppressSyntheticClick = () =>'));
-      expect(html, contains('const focusIfTapCandidate = (event) =>'));
-      expect(html, contains('if (now < suppressClickUntil) {'));
+      expect(html, contains('const suppressAndBlock = (event) =>'));
+      expect(html, contains('const endGesture = (event, id, kind) =>'));
+      expect(html, contains('suppressAndBlock(event);'));
+      expect(html, contains('const capturePassiveFalse ='));
+      expect(html, contains("ownerDocument.addEventListener('pointerdown'"));
       expect(
         html,
-        contains('const suppressCompatibilityMouseEvent = (event) =>'),
+        contains(
+          "ownerDocument.addEventListener('pointerup', onPointerUp, capturePassiveFalse",
+        ),
       );
-      expect(html, contains("node.addEventListener('pointerdown'"));
-      expect(html, contains("node.addEventListener('pointermove'"));
-      expect(html, contains("node.addEventListener('pointerup'"));
-      expect(html, contains("node.addEventListener('pointercancel'"));
-      expect(html, contains("node.addEventListener('touchstart'"));
-      expect(html, contains("node.addEventListener('touchmove'"));
-      expect(html, contains("node.addEventListener('touchend'"));
-      expect(html, contains("node.addEventListener('touchcancel'"));
-      expect(html, contains("node.addEventListener('mousedown'"));
-      expect(html, contains("node.addEventListener('mouseup'"));
-      expect(html, contains("node.addEventListener('click'"));
+      expect(
+        html,
+        contains(
+          "ownerDocument.addEventListener('touchend', onTouchEnd, capturePassiveFalse",
+        ),
+      );
+      expect(
+        html,
+        contains(
+          "ownerDocument.addEventListener('click', blockSuppressedCompatibilityEvent",
+        ),
+      );
+      expect(html, contains('node.style.touchAction'));
+      expect(html, isNot(contains('focusFromClick')));
+      expect(html, isNot(contains('guardTextareaFocus')));
+      expect(html, isNot(contains('__flutterMonacoScrollFocusGuard')));
+      expect(html, isNot(contains('new MutationObserver(guardTextareaFocus)')));
     });
 
     test('generated html keeps desktop preventScroll focus retry', () {
