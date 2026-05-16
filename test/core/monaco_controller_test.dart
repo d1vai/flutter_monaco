@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_monaco/flutter_monaco.dart';
 import 'package:flutter_monaco/src/core/monaco_bridge.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +23,17 @@ Future<_TestBundle> _createBundle({bool ready = true}) async {
     markReady: ready,
   );
   return _TestBundle(controller, webview, bridge);
+}
+
+String _evaluationEnvelope({
+  Object? value,
+  bool isUndefined = false,
+}) {
+  return jsonEncode({
+    '__flutterMonacoEval': true,
+    'isUndefined': isUndefined,
+    'value': value,
+  });
 }
 
 void main() {
@@ -1095,6 +1108,288 @@ void main() {
             const JsonDiagnosticsOptions(validate: true),
           ),
           throwsA(isA<StateError>()),
+        );
+      });
+    });
+
+    group('runJavaScript', () {
+      test('executes script after ready', () async {
+        final bundle = await _createBundle();
+        await bundle.controller.runJavaScript('console.log("hello")');
+        expect(
+          bundle.webview.executed.any((s) => s.contains('console.log')),
+          true,
+        );
+      });
+
+      test('waits for ready before executing', () async {
+        final bundle = await _createBundle(ready: false);
+        final future = bundle.controller.runJavaScript('myCustomSetup()');
+        expect(bundle.webview.executed, isEmpty);
+        bundle.controller.completeReadyForTesting();
+        await future;
+        expect(
+          bundle.webview.executed.any((s) => s.contains('myCustomSetup')),
+          true,
+        );
+      });
+
+      test('propagates platform exceptions', () async {
+        final bundle = await _createBundle();
+        bundle.webview.throwOnContains('throw new Error');
+
+        await expectLater(
+          bundle.controller.runJavaScript('throw new Error()'),
+          throwsStateError,
+        );
+      });
+    });
+
+    group('evaluateJavaScript', () {
+      test('wraps expression in the evaluation envelope', () async {
+        final bundle = await _createBundle();
+        bundle.webview.resultResolver = (script) {
+          if (script.contains('__flutterMonacoEval')) {
+            return _evaluationEnvelope(value: 42);
+          }
+          return null;
+        };
+
+        await bundle.controller.evaluateJavaScript<int>(
+          'monaco.editor.getEditors().length',
+        );
+
+        final executed = bundle.webview.executed.last;
+        expect(executed, contains('__flutterMonacoEval'));
+        expect(executed, contains('JSON.stringify'));
+        expect(executed, contains('monaco.editor.getEditors().length'));
+      });
+
+      test('normalizes numeric result to int', () async {
+        final bundle = await _createBundle();
+        bundle.webview.resultResolver = (script) {
+          if (script.contains('__flutterMonacoEval')) {
+            return _evaluationEnvelope(value: 42);
+          }
+          return null;
+        };
+
+        final result = await bundle.controller.evaluateJavaScript<int>(
+          'myQuery()',
+        );
+
+        expect(result, 42);
+        expect(result, isA<int>());
+      });
+
+      test('normalizes double-encoded numeric result to int', () async {
+        final bundle = await _createBundle();
+        bundle.webview.resultResolver = (script) {
+          if (script.contains('__flutterMonacoEval')) {
+            return jsonEncode(_evaluationEnvelope(value: 42));
+          }
+          return null;
+        };
+
+        final result = await bundle.controller.evaluateJavaScript<int>(
+          'myQuery()',
+        );
+
+        expect(result, 42);
+        expect(result, isA<int>());
+      });
+
+      test('normalizes boolean result to bool', () async {
+        final bundle = await _createBundle();
+        bundle.webview.resultResolver = (script) {
+          if (script.contains('__flutterMonacoEval')) {
+            return _evaluationEnvelope(value: true);
+          }
+          return null;
+        };
+
+        final result = await bundle.controller.evaluateJavaScript<bool>(
+          'someFlag',
+        );
+
+        expect(result, true);
+        expect(result, isA<bool>());
+      });
+
+      test('preserves string result', () async {
+        final bundle = await _createBundle();
+        bundle.webview.resultResolver = (script) {
+          if (script.contains('__flutterMonacoEval')) {
+            return _evaluationEnvelope(value: 'hello');
+          }
+          return null;
+        };
+
+        final result = await bundle.controller.evaluateJavaScript<String>(
+          '"hello"',
+        );
+
+        expect(result, 'hello');
+      });
+
+      test('preserves numeric-looking string result when T is String',
+          () async {
+        final bundle = await _createBundle();
+        bundle.webview.resultResolver = (script) {
+          if (script.contains('__flutterMonacoEval')) {
+            return _evaluationEnvelope(value: '42');
+          }
+          return null;
+        };
+
+        final result = await bundle.controller.evaluateJavaScript<String>(
+          '"42"',
+        );
+
+        expect(result, '42');
+        expect(result, isA<String>());
+      });
+
+      test('returns maps', () async {
+        final bundle = await _createBundle();
+        bundle.webview.resultResolver = (script) {
+          if (script.contains('__flutterMonacoEval')) {
+            return _evaluationEnvelope(value: {'count': 2});
+          }
+          return null;
+        };
+
+        final result = await bundle.controller
+            .evaluateJavaScript<Map<String, dynamic>>('({ count: 2 })');
+
+        expect(result, {'count': 2});
+      });
+
+      test('returns lists', () async {
+        final bundle = await _createBundle();
+        bundle.webview.resultResolver = (script) {
+          if (script.contains('__flutterMonacoEval')) {
+            return _evaluationEnvelope(value: [1, 2, 3]);
+          }
+          return null;
+        };
+
+        final result = await bundle.controller
+            .evaluateJavaScript<List<dynamic>>('[1, 2, 3]');
+
+        expect(result, [1, 2, 3]);
+      });
+
+      test('returns defaultValue when JavaScript returns null', () async {
+        final bundle = await _createBundle();
+        bundle.webview.resultResolver = (script) {
+          if (script.contains('__flutterMonacoEval')) {
+            return _evaluationEnvelope();
+          }
+          return null;
+        };
+
+        final result = await bundle.controller.evaluateJavaScript<int>(
+          'missingThing',
+          defaultValue: -1,
+        );
+
+        expect(result, -1);
+      });
+
+      test('returns defaultValue when JavaScript returns undefined', () async {
+        final bundle = await _createBundle();
+        bundle.webview.resultResolver = (script) {
+          if (script.contains('__flutterMonacoEval')) {
+            return _evaluationEnvelope(isUndefined: true);
+          }
+          return null;
+        };
+
+        final result = await bundle.controller.evaluateJavaScript<int>(
+          'missingThing',
+          defaultValue: -1,
+        );
+
+        expect(result, -1);
+      });
+
+      test('returns defaultValue when value cannot convert to T', () async {
+        final bundle = await _createBundle();
+        bundle.webview.resultResolver = (script) {
+          if (script.contains('__flutterMonacoEval')) {
+            return _evaluationEnvelope(value: {'count': 2});
+          }
+          return null;
+        };
+
+        final result = await bundle.controller.evaluateJavaScript<int>(
+          '({ count: 2 })',
+          defaultValue: -1,
+        );
+
+        expect(result, -1);
+      });
+
+      test('waits for ready before executing', () async {
+        final bundle = await _createBundle(ready: false);
+        final future = bundle.controller.evaluateJavaScript<int>('myQuery()');
+        expect(bundle.webview.executed, isEmpty);
+        bundle.webview.resultResolver = (script) {
+          if (script.contains('__flutterMonacoEval')) {
+            return _evaluationEnvelope(value: 7);
+          }
+          return null;
+        };
+        bundle.controller.completeReadyForTesting();
+        final result = await future;
+        expect(result, 7);
+        expect(bundle.webview.executed.any((s) => s.contains('myQuery')), true);
+      });
+
+      test('propagates platform exceptions', () async {
+        final bundle = await _createBundle();
+        bundle.webview.throwOnContains('badExpression');
+
+        await expectLater(
+          bundle.controller.evaluateJavaScript<int>('badExpression()'),
+          throwsStateError,
+        );
+      });
+    });
+
+    group('runJavaScriptReturningResultRaw', () {
+      test('returns platform-native value unchanged', () async {
+        final bundle = await _createBundle();
+        bundle.webview.enqueueResult('myQuery()', '42');
+
+        final result = await bundle.controller
+            .runJavaScriptReturningResultRaw('myQuery()');
+
+        expect(result, '42');
+      });
+
+      test('waits for ready before executing', () async {
+        final bundle = await _createBundle(ready: false);
+        final future =
+            bundle.controller.runJavaScriptReturningResultRaw('myQuery()');
+        expect(bundle.webview.executed, isEmpty);
+
+        bundle.webview.enqueueResult('myQuery()', 42);
+        bundle.controller.completeReadyForTesting();
+
+        final result = await future;
+        expect(result, 42);
+        expect(bundle.webview.executed.any((s) => s.contains('myQuery')), true);
+      });
+
+      test('propagates platform exceptions', () async {
+        final bundle = await _createBundle();
+        bundle.webview.throwOnContains('badQuery');
+
+        await expectLater(
+          bundle.controller.runJavaScriptReturningResultRaw('badQuery()'),
+          throwsStateError,
         );
       });
     });
