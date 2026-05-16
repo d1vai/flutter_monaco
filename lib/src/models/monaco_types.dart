@@ -166,7 +166,7 @@ sealed class Range with _$Range {
     return true;
   }
 
-  /// Checks if this range intersects with another [range].
+  /// Checks if this range intersects with [other].
   bool intersects(Range other) {
     return !(endLine < other.startLine ||
         other.endLine < startLine ||

@@ -22,4 +22,4 @@ jobs:
       - name: Pub get
         run: flutter pub get
       - name: Pub publish dry run
-        run: flutter pub publish --dry-run
+        run: dart pub publish --dry-run

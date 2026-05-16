@@ -431,7 +431,7 @@ class MonacoAssets {
   ///
   /// See also:
   /// - [MonacoController] which calls the `flutterMonaco` methods.
-  /// - [MonacoBridge] which receives events from the HTML.
+  /// - The Monaco bridge, which receives events from the HTML.
   static String generateIndexHtml(
     String vsPath, {
     bool isWindows = false,
