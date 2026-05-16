@@ -74,5 +74,65 @@ void main() {
       final infoAfter = await MonacoAssets.assetInfo();
       expect(infoAfter['exists'], false);
     });
+
+    test('generated html includes mobile viewport metadata', () {
+      final html = MonacoAssets.generateIndexHtml('min/vs');
+
+      expect(html, contains('name="viewport"'));
+      expect(
+        html,
+        contains(
+          'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no',
+        ),
+      );
+    });
+
+    test('generated html does not override Monaco inputarea layout', () {
+      final html = MonacoAssets.generateIndexHtml('min/vs');
+
+      expect(html, isNot(contains('.monaco-editor .inputarea')));
+      expect(html, isNot(contains('@media (pointer: coarse)')));
+    });
+
+    test('generated html includes tap-gated mobile gesture focus bridge', () {
+      final html = MonacoAssets.generateIndexHtml('min/vs');
+
+      expect(html, contains('const isMobileInputPlatform = () =>'));
+      expect(html, contains("navigator.platform === 'MacIntel'"));
+      expect(html, contains('navigator.maxTouchPoints > 1'));
+      expect(html, contains('const focusEditorTextAreaNow = () =>'));
+      expect(html, contains('const tapMoveThreshold = 12'));
+      expect(html, contains('const compatibilityEventSuppressMs = 1200'));
+      expect(html, contains('const beginTapCandidate = (event) =>'));
+      expect(html, contains('const updateTapCandidate = (event) =>'));
+      expect(html, contains('const blockEvent = (event) =>'));
+      expect(html, contains('let suppressClickUntil = 0'));
+      expect(html, contains('const suppressSyntheticClick = () =>'));
+      expect(html, contains('const focusIfTapCandidate = (event) =>'));
+      expect(html, contains('if (now < suppressClickUntil) {'));
+      expect(
+        html,
+        contains('const suppressCompatibilityMouseEvent = (event) =>'),
+      );
+      expect(html, contains("node.addEventListener('pointerdown'"));
+      expect(html, contains("node.addEventListener('pointermove'"));
+      expect(html, contains("node.addEventListener('pointerup'"));
+      expect(html, contains("node.addEventListener('pointercancel'"));
+      expect(html, contains("node.addEventListener('touchstart'"));
+      expect(html, contains("node.addEventListener('touchmove'"));
+      expect(html, contains("node.addEventListener('touchend'"));
+      expect(html, contains("node.addEventListener('touchcancel'"));
+      expect(html, contains("node.addEventListener('mousedown'"));
+      expect(html, contains("node.addEventListener('mouseup'"));
+      expect(html, contains("node.addEventListener('click'"));
+    });
+
+    test('generated html keeps desktop preventScroll focus retry', () {
+      final html = MonacoAssets.generateIndexHtml('min/vs');
+
+      expect(html, contains('if (isMobileInputPlatform())'));
+      expect(html, contains('focusEditorTextAreaNow();'));
+      expect(html, contains('ta.focus({ preventScroll: true });'));
+    });
   });
 }

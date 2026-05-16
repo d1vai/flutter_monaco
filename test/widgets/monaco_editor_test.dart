@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_monaco/flutter_monaco.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -261,17 +262,40 @@ void main() {
     });
 
     group('autofocus', () {
-      testWidgets('autofocus triggers ensureEditorFocus', (tester) async {
-        final bundle = await _createBundle();
-        await tester.pumpWidget(_wrap(MonacoEditor(
-          controller: bundle.controller,
-          autofocus: true,
-        )));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 100));
-        await tester.pumpAndSettle();
+      testWidgets('autofocus triggers ensureEditorFocus on desktop',
+          (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+        try {
+          final bundle = await _createBundle();
+          await tester.pumpWidget(_wrap(MonacoEditor(
+            controller: bundle.controller,
+            autofocus: true,
+          )));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
+          await tester.pumpAndSettle();
 
-        bundle.webview.assertExecuted('forceFocus');
+          bundle.webview.assertExecuted('forceFocus');
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('autofocus skips programmatic focus on mobile',
+          (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          final bundle = await _createBundle();
+          await tester.pumpWidget(_wrap(MonacoEditor(
+            controller: bundle.controller,
+            autofocus: true,
+          )));
+          await tester.pumpAndSettle();
+
+          bundle.webview.assertNotExecuted('forceFocus');
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
       });
 
       testWidgets('autofocus false does not trigger focus', (tester) async {

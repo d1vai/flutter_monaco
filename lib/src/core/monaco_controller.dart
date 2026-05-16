@@ -425,6 +425,8 @@ class MonacoController {
   /// Requests focus for the editor widget.
   ///
   /// Uses a robust method that waits for visibility and layout before attempting focus.
+  /// On Android and iOS, the OS soft keyboard may only appear after a user tap
+  /// inside the editor.
   Future<void> focus() async {
     if (!_interactionEnabled) return;
     await _ensureReady();
@@ -441,12 +443,19 @@ class MonacoController {
       Duration interval = const Duration(milliseconds: 24)}) async {
     if (!_interactionEnabled) return;
     await _ensureReady();
-    for (var i = 0; i < attempts; i++) {
+
+    // On mobile, multiple async focus() calls interrupt the IME lifecycle.
+    final isMobileNative = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    final effectiveAttempts = isMobileNative ? 1 : attempts;
+
+    for (var i = 0; i < effectiveAttempts; i++) {
       try {
         await _webViewController.runJavaScript(
             'window.flutterMonaco && window.flutterMonaco.forceFocus && window.flutterMonaco.forceFocus()');
       } catch (_) {}
-      if (i + 1 < attempts) {
+      if (i + 1 < effectiveAttempts) {
         await Future<void>.delayed(interval);
       }
     }

@@ -552,6 +552,7 @@ class MonacoAssets {
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self' file: 'unsafe-inline' 'unsafe-eval'; script-src 'self' file: 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'${allowCdnFonts ? ' https:' : ''}; font-src 'self' file: data:${allowCdnFonts ? ' https:' : ''}; img-src 'self' data: blob: file:; worker-src 'self' blob:; connect-src 'self' blob:;"
@@ -664,6 +665,33 @@ class MonacoAssets {
               // Set up typed API
               (function () {
                 const E = () => window.editor;
+                const isMobileInputPlatform = () => {
+                  const ua = navigator.userAgent || '';
+                  return /Android|iPhone|iPad|iPod/i.test(ua) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                };
+                const getEditorNode = () => {
+                  const ed = E();
+                  if (!ed) return null;
+                  return (ed.getDomNode && ed.getDomNode()) ||
+                    (ed.getContainerDomNode && ed.getContainerDomNode()) ||
+                    null;
+                };
+                const focusEditorTextAreaNow = () => {
+                  try {
+                    const ed = E();
+                    const node = getEditorNode();
+                    if (!ed || !node) return;
+                    try { ed.layout && ed.layout(); } catch (_) {}
+                    try { ed.focus && ed.focus(); } catch (_) {}
+                    try {
+                      const ta = node.querySelector('textarea.inputarea');
+                      if (ta && document.activeElement !== ta) {
+                        ta.focus();
+                      }
+                    } catch (_) {}
+                  } catch (_) {}
+                };
                 const serialize = (obj) => JSON.stringify(obj);
                 
 
@@ -696,16 +724,19 @@ class MonacoAssets {
                   forceFocus: () => {
                     try {
                       const ed = E();
-                      if (!ed) return;
-                      const node = (ed.getDomNode && ed.getDomNode()) || (ed.getContainerDomNode && ed.getContainerDomNode());
-                      if (!node) return;
+                      const node = getEditorNode();
+                      if (!ed || !node) return;
+
+                      if (isMobileInputPlatform()) {
+                        focusEditorTextAreaNow();
+                        return;
+                      }
+
                       const attempt = () => {
                         const rect = node.getBoundingClientRect();
                         if (!rect.width || !rect.height) {
-                          // Defer until container has size
                           return requestAnimationFrame(attempt);
                         }
-                        // Try to ensure the page/window is active (helps WKWebView on macOS)
                         try { window.focus && window.focus(); } catch (_) {}
                         try {
                           if (document.body && !document.body.hasAttribute('tabindex')) {
@@ -715,17 +746,16 @@ class MonacoAssets {
                         } catch (_) {}
                         try { ed.layout && ed.layout(); } catch (_) {}
                         try { ed.focus && ed.focus(); } catch (_) {}
-                        // Ensure the hidden textarea owns focus for keyboard input
                         try {
                           const ta = node.querySelector('textarea.inputarea');
                           if (ta && document.activeElement !== ta) {
                             ta.focus({ preventScroll: true });
-                            // One more tick for WKWebView
-                            setTimeout(() => { try { ta.focus({ preventScroll: true }); } catch (_) {} }, 16);
+                            setTimeout(() => {
+                              try { ta.focus({ preventScroll: true }); } catch (_) {}
+                            }, 16);
                           }
                         } catch (_) {}
                       };
-                      // Defer past any mousedown handlers
                       setTimeout(() => requestAnimationFrame(attempt), 0);
                     } catch (_) {}
                   },
@@ -908,6 +938,121 @@ class MonacoAssets {
                   },
                   listModels: () => monaco.editor.getModels().map(m => m.uri.toString()),
                 };
+
+                if (isMobileInputPlatform()) {
+                  try {
+                    const node = getEditorNode();
+                    if (node && !node.__flutterMonacoMobileFocusBound) {
+                      node.__flutterMonacoMobileFocusBound = true;
+                      const tapMoveThreshold = 12;
+                      const tapTimeThreshold = 800;
+                      const compatibilityEventSuppressMs = 1200;
+                      let tapCandidate = null;
+                      let lastFocusAt = 0;
+                      let suppressClickUntil = 0;
+                      const eventPoint = (event) => {
+                        const touch =
+                          event.changedTouches?.[0] || event.touches?.[0];
+                        if (touch) {
+                          return { x: touch.clientX, y: touch.clientY };
+                        }
+                        if (typeof event.clientX === 'number') {
+                          return { x: event.clientX, y: event.clientY };
+                        }
+                        return null;
+                      };
+                      const beginTapCandidate = (event) => {
+                        const point = eventPoint(event);
+                        if (!point) return;
+                        tapCandidate = {
+                          x: point.x,
+                          y: point.y,
+                          startedAt: Date.now(),
+                          moved: false,
+                        };
+                      };
+                      const updateTapCandidate = (event) => {
+                        if (!tapCandidate) return;
+                        const point = eventPoint(event);
+                        if (!point) return;
+                        const dx = point.x - tapCandidate.x;
+                        const dy = point.y - tapCandidate.y;
+                        if ((dx * dx + dy * dy) > tapMoveThreshold * tapMoveThreshold) {
+                          tapCandidate.moved = true;
+                        }
+                      };
+                      const blockEvent = (event) => {
+                        try { event.preventDefault && event.preventDefault(); } catch (_) {}
+                        try { event.stopImmediatePropagation && event.stopImmediatePropagation(); } catch (_) {}
+                        try { event.stopPropagation && event.stopPropagation(); } catch (_) {}
+                      };
+                      const suppressSyntheticClick = () => {
+                        suppressClickUntil = Date.now() + compatibilityEventSuppressMs;
+                      };
+                      const cancelTapCandidate = () => {
+                        tapCandidate = null;
+                        suppressSyntheticClick();
+                      };
+                      const focusIfTapCandidate = (event) => {
+                        if (!tapCandidate) return;
+                        updateTapCandidate(event);
+                        const elapsed = Date.now() - tapCandidate.startedAt;
+                        const shouldFocus =
+                          !tapCandidate.moved && elapsed <= tapTimeThreshold;
+                        tapCandidate = null;
+                        if (!shouldFocus) {
+                          suppressSyntheticClick();
+                          return;
+                        }
+                        const now = Date.now();
+                        if (now - lastFocusAt < 150) return;
+                        lastFocusAt = now;
+                        focusEditorTextAreaNow();
+                      };
+                      const suppressCompatibilityMouseEvent = (event) => {
+                        const now = Date.now();
+                        if (now >= suppressClickUntil) return;
+                        blockEvent(event);
+                      };
+                      const focusFromClick = (event) => {
+                        const now = Date.now();
+                        if (now < suppressClickUntil) {
+                          blockEvent(event);
+                          return;
+                        }
+                        if (now - lastFocusAt < 150) return;
+                        lastFocusAt = now;
+                        focusEditorTextAreaNow();
+                      };
+                      node.addEventListener('pointerdown', beginTapCandidate, { capture: true });
+                      node.addEventListener('pointermove', updateTapCandidate, {
+                        capture: true,
+                        passive: true,
+                      });
+                      node.addEventListener('pointerup', focusIfTapCandidate, { capture: true });
+                      node.addEventListener('pointercancel', cancelTapCandidate, { capture: true });
+                      node.addEventListener('touchstart', beginTapCandidate, {
+                        capture: true,
+                        passive: true,
+                      });
+                      node.addEventListener('touchmove', updateTapCandidate, {
+                        capture: true,
+                        passive: true,
+                      });
+                      node.addEventListener('touchend', focusIfTapCandidate, {
+                        capture: true,
+                        passive: true,
+                      });
+                      node.addEventListener('touchcancel', cancelTapCandidate, {
+                        capture: true,
+                        passive: true,
+                      });
+                      node.addEventListener('mousedown', suppressCompatibilityMouseEvent, { capture: true });
+                      node.addEventListener('mouseup', suppressCompatibilityMouseEvent, { capture: true });
+                      node.addEventListener('click', focusFromClick, { capture: true });
+                    }
+                  } catch (_) {}
+                }
 
                 // Completion bridge: JS stays dumb, Flutter drives the data
                 (function () {

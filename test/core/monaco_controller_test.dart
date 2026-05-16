@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_monaco/flutter_monaco.dart';
 import 'package:flutter_monaco/src/core/monaco_bridge.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -902,16 +903,38 @@ void main() {
         expect(bundle.webview.executed.join('\n'), contains('forceFocus'));
       });
 
-      test('ensureEditorFocus retries multiple times', () async {
-        final bundle = await _createBundle();
-        await bundle.controller.ensureEditorFocus(
-          attempts: 3,
-          interval: Duration.zero,
-        );
-        final count = bundle.webview.executed
-            .where((s) => s.contains('forceFocus'))
-            .length;
-        expect(count, 3);
+      test('ensureEditorFocus retries multiple times on desktop', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+        try {
+          final bundle = await _createBundle();
+          await bundle.controller.ensureEditorFocus(
+            attempts: 3,
+            interval: Duration.zero,
+          );
+          final count = bundle.webview.executed
+              .where((s) => s.contains('forceFocus'))
+              .length;
+          expect(count, 3);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('ensureEditorFocus uses one attempt on mobile', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          final bundle = await _createBundle();
+          await bundle.controller.ensureEditorFocus(
+            attempts: 3,
+            interval: Duration.zero,
+          );
+          final count = bundle.webview.executed
+              .where((s) => s.contains('forceFocus'))
+              .length;
+          expect(count, 1);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
       });
 
       test('layout calls layout', () async {
