@@ -431,7 +431,7 @@ class MonacoAssets {
   ///
   /// See also:
   /// - [MonacoController] which calls the `flutterMonaco` methods.
-  /// - [MonacoBridge] which receives events from the HTML.
+  /// - The Monaco bridge, which receives events from the HTML.
   static String generateIndexHtml(
     String vsPath, {
     bool isWindows = false,
@@ -789,6 +789,11 @@ class MonacoAssets {
                   // Decorations
                   deltaDecorations: (oldIds, newDecos) =>
                     E().deltaDecorations(oldIds || [], newDecos || []),
+
+                  // JSON language diagnostics
+                  setJsonDiagnosticsOptions: (diagnostics) => {
+                    monaco.languages.json.jsonDefaults.setDiagnosticsOptions(diagnostics);
+                  },
 
                   // Markers (diagnostics)
                   setModelMarkers: (owner, markers) =>
