@@ -53,12 +53,17 @@ abstract class PlatformWebViewController {
 
   /// Executes JavaScript code and returns the result.
   ///
-  /// The return type varies by platform:
-  /// - **webview_flutter:** Returns Dart primitives or JSON-decoded objects
-  /// - **webview_windows:** Returns strings that may need JSON parsing
-  /// - **Web iframe:** Returns dartified JS objects
+  /// Return-type behavior varies by platform:
   ///
-  /// Use [parseWindowsScriptResult] to normalize Windows WebView2 results.
+  /// - iOS and macOS via WKWebView usually return native Dart values.
+  /// - Android WebView may return JSON-encoded strings.
+  /// - Windows WebView2 may return strings where numeric and boolean literals
+  ///   remain strings after platform normalization.
+  /// - Web iframe returns the result of JS interop conversion.
+  ///
+  /// `MonacoController.evaluateJavaScript<T>` normalizes these differences for
+  /// JSON-serializable values. Prefer that method at the controller layer
+  /// unless raw platform output is specifically required.
   ///
   /// Throws platform-specific exceptions if the script fails to execute.
   Future<Object?> runJavaScriptReturningResult(String script);

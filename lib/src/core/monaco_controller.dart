@@ -29,6 +29,11 @@ class MonacoController {
     _wireEvents();
   }
 
+  static const String _jsEvalEnvelopeKey = '__flutterMonacoEval';
+  static const String _jsEvalValueKey = 'value';
+  static const String _jsEvalUndefinedKey = 'isUndefined';
+  static const _jsUndefined = _JavaScriptUndefinedValue();
+
   final MonacoBridge _bridge;
   final PlatformWebViewController _webViewController;
   final Completer<void> _onReady = Completer<void>();
@@ -627,6 +632,62 @@ class MonacoController {
     }
   }
 
+  String _wrapJavaScriptEvaluationExpression(String expression) {
+    final envelopeKey = jsonEncode(_jsEvalEnvelopeKey);
+    final valueKey = jsonEncode(_jsEvalValueKey);
+    final undefinedKey = jsonEncode(_jsEvalUndefinedKey);
+
+    return '''
+      (function() {
+        const value = ($expression);
+
+        if (typeof value === 'undefined') {
+          return JSON.stringify({
+            $envelopeKey: true,
+            $undefinedKey: true,
+            $valueKey: null
+          });
+        }
+
+        return JSON.stringify({
+          $envelopeKey: true,
+          $undefinedKey: false,
+          $valueKey: value
+        });
+      })()
+    ''';
+  }
+
+  Object? _decodeJavaScriptEvaluationResult(Object? raw) {
+    Object? current = raw;
+
+    for (var i = 0; i < 3; i++) {
+      if (current is! String) break;
+
+      final trimmed = current.trim();
+      if (trimmed.isEmpty) return null;
+
+      try {
+        current = jsonDecode(trimmed);
+      } catch (_) {
+        break;
+      }
+    }
+
+    final envelope = tryConvertToMap<String, dynamic>(current);
+    if (envelope == null || envelope[_jsEvalEnvelopeKey] != true) {
+      return current;
+    }
+
+    if (envelope[_jsEvalUndefinedKey] == true) {
+      return _jsUndefined;
+    }
+
+    return envelope.containsKey(_jsEvalValueKey)
+        ? envelope[_jsEvalValueKey]
+        : null;
+  }
+
   // --- CONTENT AND SELECTION ---
 
   /// Retrieves the current text content of the editor.
@@ -1115,42 +1176,128 @@ class MonacoController {
     );
   }
 
-  // --- RAW JAVASCRIPT EXECUTION ---
+  // --- JAVASCRIPT ESCAPE HATCH ---
 
-  /// Executes arbitrary JavaScript code in the editor's WebView.
+  /// Executes arbitrary JavaScript in the editor WebView.
   ///
-  /// This is a general-purpose escape hatch for scenarios not covered by the
-  /// typed API — e.g. configuring language services, injecting plugins, or
-  /// calling Monaco APIs that are not yet wrapped.
+  /// This is an advanced escape hatch for scenarios not covered by the typed
+  /// Dart API. Prefer typed [MonacoController] methods such as [setValue],
+  /// [getSelection], [setMarkers], and [executeAction] when they cover your
+  /// use case.
   ///
-  /// The method waits for the editor to be ready before executing the script.
+  /// Useful for configuring Monaco language services, such as JSON schemas or
+  /// TypeScript options, or for calling Monaco APIs not yet wrapped by this
+  /// package.
+  ///
+  /// Loading third-party plugin scripts at runtime requires bundling those
+  /// scripts with your app and respecting the editor page's
+  /// Content-Security-Policy. The default CSP does not allow remote script
+  /// origins.
+  ///
+  /// Waits for the editor to be ready before executing.
+  ///
+  /// ## Security
+  ///
+  /// Do not interpolate untrusted or user-provided values directly into
+  /// [script]. This is raw JavaScript execution and string concatenation can
+  /// create a script-injection vulnerability. Use `jsonEncode` for dynamic
+  /// values:
   ///
   /// ```dart
-  /// // Configure JSON diagnostics options
-  /// await controller.runJavaScript('''
-  ///   monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-  ///     validate: true,
-  ///     schemas: [{ uri: 'http://schema/example', fileMatch: ['*'], schema: mySchema }]
-  ///   });
-  /// ''');
+  /// // Bad if userInput is attacker-controlled.
+  /// await controller.runJavaScript('window.setName("$userInput")');
+  ///
+  /// // Good: jsonEncode creates a safe JavaScript literal.
+  /// await controller.runJavaScript(
+  ///   'window.setName(${jsonEncode(userInput)})',
+  /// );
   /// ```
+  ///
+  /// See also:
+  /// - [evaluateJavaScript] for typed, cross-platform result normalization.
+  /// - [runJavaScriptReturningResultRaw] for raw platform return values.
   Future<void> runJavaScript(String script) async {
     await _ensureReady();
     await _webViewController.runJavaScript(script);
   }
 
-  /// Executes JavaScript code and returns the result.
+  /// Evaluates a JavaScript expression and returns a Dart value of type [T].
   ///
-  /// Like [runJavaScript], but captures and returns the evaluation result.
-  /// The return type varies by platform — see [PlatformWebViewController]
-  /// for details.
+  /// This is the recommended way to read values from the editor's JavaScript
+  /// context. It normalizes platform differences so numeric, boolean, string,
+  /// list, map, and null values behave consistently across supported
+  /// platforms.
+  ///
+  /// [expression] must be a JavaScript expression. For multi-statement logic,
+  /// pass an IIFE expression:
   ///
   /// ```dart
-  /// final version = await controller.runJavaScriptReturningResult(
+  /// final count = await controller.evaluateJavaScript<int>(
+  ///   '(() => { const editors = monaco.editor.getEditors(); return editors.length; })()',
+  /// );
+  /// ```
+  ///
+  /// Returns [defaultValue] when the expression returns `undefined`, when the
+  /// decoded value is `null`, or when the value cannot be converted to [T].
+  ///
+  /// JavaScript execution errors are allowed to propagate. This keeps raw
+  /// JavaScript integrations easier to debug.
+  ///
+  /// ## Security
+  ///
+  /// Same caveat as [runJavaScript]: do not interpolate untrusted input into
+  /// [expression]. Use `jsonEncode` for dynamic values.
+  ///
+  /// ## JSON compatibility
+  ///
+  /// The returned JavaScript value must be JSON-serializable. Values such as
+  /// functions, symbols, BigInts, DOM nodes, and circular objects are not
+  /// supported by this typed evaluator. Use [runJavaScriptReturningResultRaw]
+  /// if you need raw platform behavior.
+  ///
+  /// ## Example
+  ///
+  /// ```dart
+  /// final editorCount = await controller.evaluateJavaScript<int>(
   ///   'monaco.editor.getEditors().length',
   /// );
   /// ```
-  Future<Object?> runJavaScriptReturningResult(String script) async {
+  Future<T?> evaluateJavaScript<T>(
+    String expression, {
+    T? defaultValue,
+  }) async {
+    await _ensureReady();
+
+    final wrapped = _wrapJavaScriptEvaluationExpression(expression);
+    final raw = await _webViewController.runJavaScriptReturningResult(wrapped);
+    final decoded = _decodeJavaScriptEvaluationResult(raw);
+
+    if (decoded == _jsUndefined || decoded == null) {
+      return defaultValue;
+    }
+
+    return tryConvertToType<T>(decoded) ?? defaultValue;
+  }
+
+  /// Executes JavaScript and returns the platform-native result.
+  ///
+  /// Advanced use only. Return types vary by platform:
+  ///
+  /// - iOS, macOS, and Web usually return native Dart values.
+  /// - Android may return JSON-encoded strings.
+  /// - Windows WebView2 may return strings where numeric and boolean literals
+  ///   remain strings.
+  ///
+  /// Prefer [evaluateJavaScript] for cross-platform consistency. Use this
+  /// method only when you specifically need the raw platform return shape, for
+  /// example for debugging or advanced WebView interop.
+  ///
+  /// Waits for the editor to be ready before executing.
+  ///
+  /// ## Security
+  ///
+  /// Same caveat as [runJavaScript].
+  Future<Object?> runJavaScriptReturningResultRaw(String script) async {
     await _ensureReady();
     return _webViewController.runJavaScriptReturningResult(script);
   }
@@ -1181,4 +1328,8 @@ class _RegisteredCompletion {
   final List<String> languages;
   final List<String> triggerCharacters;
   final CompletionProvider provider;
+}
+
+class _JavaScriptUndefinedValue {
+  const _JavaScriptUndefinedValue();
 }

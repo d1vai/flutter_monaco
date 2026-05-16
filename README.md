@@ -260,7 +260,7 @@ String _currentWord(CompletionRequest request) {
 - `position`, `defaultRange`, `lineText` – cursor info plus the word range Monaco wants you to replace.
 - `triggerKind`, `triggerCharacter` – what caused the completion (manual `Ctrl+Space`, character, etc.).
 
-Need to remove a provider? Call `controller.unregisterCompletionSource(id)` at any time. You can register as many providers as you need—Monaco merges them and sorts via each item's `sortText`.
+Need to remove a provider? Call `controller.unregisterCompletionSource(id)` at any time. You can register as many providers as you need. Monaco merges them and sorts via each item's `sortText`.
 
 ## Multiple Editors Example
 
@@ -364,7 +364,7 @@ await controller.executeAction(MonacoAction.toggleLineComment);
 // Or use a raw Monaco action id string if needed:
 // await controller.executeAction('editor.action.commentLine');
 
-// Raw JavaScript execution (escape hatch for uncovered APIs)
+// JavaScript escape hatch for uncovered Monaco APIs
 await controller.runJavaScript('''
   monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
     validate: true,
@@ -375,7 +375,12 @@ await controller.runJavaScript('''
     }]
   });
 ''');
-final editorCount = await controller.runJavaScriptReturningResult(
+
+final editorCount = await controller.evaluateJavaScript<int>(
+  'monaco.editor.getEditors().length',
+);
+
+final rawEditorCount = await controller.runJavaScriptReturningResultRaw(
   'monaco.editor.getEditors().length',
 );
 
@@ -402,6 +407,60 @@ controller.onBlur.listen((_) => print('Editor blurred'));
 
 For a full set of bundled action IDs, use `MonacoAction` (exported by this
 package) to avoid stringly-typed calls.
+
+### JavaScript Escape Hatch
+
+For Monaco APIs not yet wrapped by the typed Dart API, `MonacoController`
+provides an advanced JavaScript escape hatch. Prefer typed methods such as
+`setValue`, `getSelection`, `setMarkers`, and `executeAction` when they cover
+your use case.
+
+| Method | Use case |
+| --- | --- |
+| `runJavaScript(script)` | Fire-and-forget configuration or commands. |
+| `evaluateJavaScript<T>(expression)` | Read a JSON-serializable value with cross-platform type normalization. |
+| `runJavaScriptReturningResultRaw(script)` | Advanced raw platform-native result access. |
+
+```dart
+await controller.runJavaScript('''
+  monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+    validate: true,
+    schemas: [{
+      uri: 'http://my-schema',
+      fileMatch: ['*'],
+      schema: { type: 'object' }
+    }]
+  });
+''');
+
+final editorCount = await controller.evaluateJavaScript<int>(
+  'monaco.editor.getEditors().length',
+);
+```
+
+Use raw result access only when you specifically need platform-native WebView
+behavior:
+
+```dart
+final raw = await controller.runJavaScriptReturningResultRaw(
+  'monaco.editor.getEditors().length',
+);
+```
+
+These methods do not sanitize input. Do not concatenate untrusted strings into
+a script. Use `jsonEncode` to safely embed dynamic values:
+
+```dart
+import 'dart:convert';
+
+// Bad if userInput is attacker-controlled.
+await controller.runJavaScript('window.setName("$userInput")');
+
+// Good: jsonEncode creates a safe JavaScript literal.
+await controller.runJavaScript(
+  'window.setName(${jsonEncode(userInput)})',
+);
+```
 
 ### Advanced Features
 

@@ -6,7 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.5.0] - 2026-04-22
 
 ### Added
-- Added `runJavaScript()` and `runJavaScriptReturningResult()` public methods on `MonacoController`. These delegate to the underlying `PlatformWebViewController` and provide a general-purpose escape hatch for configuring language services, injecting plugins, or calling Monaco APIs not yet wrapped by the typed API.
+- Added `MonacoController.runJavaScript(String script)` as an advanced fire-and-forget JavaScript escape hatch. It waits for the editor to be ready before executing.
+- Added `MonacoController.evaluateJavaScript<T>(String expression, {T? defaultValue})` for typed JavaScript evaluation with cross-platform result normalization.
+- Added `MonacoController.runJavaScriptReturningResultRaw(String script)` for advanced callers who need the platform-native return value.
+
+### Security
+- Documented that JavaScript escape-hatch methods do not sanitize input and that callers should use `jsonEncode` when embedding dynamic values.
 
 ## [1.4.0] - 2026-01-25
 
@@ -57,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Export ordering and analyzer fixes to keep the public API clean.
 
 ## [1.0.0] - 2025-09-15
-- Reliable typing after route/app switches on macOS/Windows — no right‑click needed.
+- Reliable typing after route/app switches on macOS/Windows - no right‑click needed.
 - Optional `MonacoFocusGuard` to auto‑restore focus on resume/route return.
 - New guide: doc/focus-and-platform-views.md with best practices and snippets.
 - Sensible defaults: word wrap ON, minimap OFF, consistent across APIs.
