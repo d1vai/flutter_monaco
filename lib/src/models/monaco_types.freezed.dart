@@ -5580,30 +5580,58 @@ class __$FindMatchCopyWithImpl<$Res> implements _$FindMatchCopyWith<$Res> {
 
 /// @nodoc
 mixin _$JsonDiagnosticsOptions {
-  /// If set, comments are tolerated. If set to false, syntax errors will be emitted for comments
+  /// Whether to tolerate comments inside JSON.
+  ///
+  /// When `true`, comments are allowed without emitting syntax errors.
+  /// When `false`, Monaco treats comments as syntax errors. When `null`,
+  /// this field is omitted and Monaco keeps its bundled default (`true`).
+  /// See also [comments], which controls the diagnostic severity when
+  /// Monaco reports comments.
   bool? get allowComments;
 
-  /// If set, the schema service would load schema content on-demand with 'fetch' if available
+  /// Whether Monaco should fetch remote schemas on demand using `fetch`.
+  ///
+  /// Requires the schema host to be allowed by the Content Security Policy.
+  /// The default CSP uses `connect-src 'self' blob:`, which blocks external
+  /// hosts. Remote schema fetches that fail are reported at the severity
+  /// configured by [schemaRequest].
   bool? get enableSchemaRequest;
 
-  /// If set, the schema service would validate schemas and report errors.
+  /// Whether Monaco should validate JSON content against the provided
+  /// [schemas].
+  ///
+  /// Set to `true` to enable schema validation. When `null`, Monaco uses
+  /// its own default (enabled).
   bool? get validate;
 
-  /// The severity level to use for schema request errors (e.g., if a schema fails to load).
-  /// Defaults to `warning` if not specified.
+  /// Severity for schema-fetch failures (e.g. network errors or 404s).
+  ///
+  /// Only relevant when [enableSchemaRequest] is `true`. Monaco defaults
+  /// to [DiagnosticsSeverity.warning] when `null`.
   DiagnosticsSeverity? get schemaRequest;
 
-  /// The severity level to use for schema validation errors, `ignore` will disable validation.
-  /// Defaults to `warning` if not specified.
+  /// Severity for schema validation errors. Set to
+  /// [DiagnosticsSeverity.ignore] to suppress schema validation entirely.
+  ///
+  /// Monaco defaults to [DiagnosticsSeverity.warning] when `null`.
   DiagnosticsSeverity? get schemaValidation;
 
-  /// The severity level to use for trailing comma errors. Defaults to `error` if not specified.
+  /// Severity for trailing commas in JSON.
+  ///
+  /// Monaco defaults to [DiagnosticsSeverity.error] when `null`.
   DiagnosticsSeverity? get trailingCommas;
 
-  /// The severity level to use for comments if `allowComments` is `true`. Defaults to `info` if not specified.
+  /// Severity for comments in JSON. Takes precedence over [allowComments]:
+  /// setting this to [DiagnosticsSeverity.ignore] suppresses comment
+  /// diagnostics regardless of the [allowComments] value.
+  ///
+  /// Monaco defaults to [DiagnosticsSeverity.error] when `null`.
   DiagnosticsSeverity? get comments;
 
-  /// A list of known schemas and/or associations of schemas to file names.
+  /// Schema definitions and their file-match associations.
+  ///
+  /// Each [JsonDiagnosticsSchema] maps a JSON Schema to a set of model-URI
+  /// patterns. See [JsonDiagnosticsSchema.fileMatch] for matching details.
   List<JsonDiagnosticsSchema>? get schemas;
 
   /// Create a copy of JsonDiagnosticsOptions
@@ -5949,40 +5977,71 @@ class _JsonDiagnosticsOptions extends JsonDiagnosticsOptions {
       : _schemas = schemas,
         super._();
 
-  /// If set, comments are tolerated. If set to false, syntax errors will be emitted for comments
+  /// Whether to tolerate comments inside JSON.
+  ///
+  /// When `true`, comments are allowed without emitting syntax errors.
+  /// When `false`, Monaco treats comments as syntax errors. When `null`,
+  /// this field is omitted and Monaco keeps its bundled default (`true`).
+  /// See also [comments], which controls the diagnostic severity when
+  /// Monaco reports comments.
   @override
   final bool? allowComments;
 
-  /// If set, the schema service would load schema content on-demand with 'fetch' if available
+  /// Whether Monaco should fetch remote schemas on demand using `fetch`.
+  ///
+  /// Requires the schema host to be allowed by the Content Security Policy.
+  /// The default CSP uses `connect-src 'self' blob:`, which blocks external
+  /// hosts. Remote schema fetches that fail are reported at the severity
+  /// configured by [schemaRequest].
   @override
   final bool? enableSchemaRequest;
 
-  /// If set, the schema service would validate schemas and report errors.
+  /// Whether Monaco should validate JSON content against the provided
+  /// [schemas].
+  ///
+  /// Set to `true` to enable schema validation. When `null`, Monaco uses
+  /// its own default (enabled).
   @override
   final bool? validate;
 
-  /// The severity level to use for schema request errors (e.g., if a schema fails to load).
-  /// Defaults to `warning` if not specified.
+  /// Severity for schema-fetch failures (e.g. network errors or 404s).
+  ///
+  /// Only relevant when [enableSchemaRequest] is `true`. Monaco defaults
+  /// to [DiagnosticsSeverity.warning] when `null`.
   @override
   final DiagnosticsSeverity? schemaRequest;
 
-  /// The severity level to use for schema validation errors, `ignore` will disable validation.
-  /// Defaults to `warning` if not specified.
+  /// Severity for schema validation errors. Set to
+  /// [DiagnosticsSeverity.ignore] to suppress schema validation entirely.
+  ///
+  /// Monaco defaults to [DiagnosticsSeverity.warning] when `null`.
   @override
   final DiagnosticsSeverity? schemaValidation;
 
-  /// The severity level to use for trailing comma errors. Defaults to `error` if not specified.
+  /// Severity for trailing commas in JSON.
+  ///
+  /// Monaco defaults to [DiagnosticsSeverity.error] when `null`.
   @override
   final DiagnosticsSeverity? trailingCommas;
 
-  /// The severity level to use for comments if `allowComments` is `true`. Defaults to `info` if not specified.
+  /// Severity for comments in JSON. Takes precedence over [allowComments]:
+  /// setting this to [DiagnosticsSeverity.ignore] suppresses comment
+  /// diagnostics regardless of the [allowComments] value.
+  ///
+  /// Monaco defaults to [DiagnosticsSeverity.error] when `null`.
   @override
   final DiagnosticsSeverity? comments;
 
-  /// A list of known schemas and/or associations of schemas to file names.
+  /// Schema definitions and their file-match associations.
+  ///
+  /// Each [JsonDiagnosticsSchema] maps a JSON Schema to a set of model-URI
+  /// patterns. See [JsonDiagnosticsSchema.fileMatch] for matching details.
   final List<JsonDiagnosticsSchema>? _schemas;
 
-  /// A list of known schemas and/or associations of schemas to file names.
+  /// Schema definitions and their file-match associations.
+  ///
+  /// Each [JsonDiagnosticsSchema] maps a JSON Schema to a set of model-URI
+  /// patterns. See [JsonDiagnosticsSchema.fileMatch] for matching details.
   @override
   List<JsonDiagnosticsSchema>? get schemas {
     final value = _schemas;
@@ -6121,9 +6180,23 @@ class __$JsonDiagnosticsOptionsCopyWithImpl<$Res>
 
 /// @nodoc
 mixin _$JsonDiagnosticsSchema {
-  /// The URI of the schema to validate against.
+  /// Identifier for this schema. When [schema] is `null` and
+  /// [JsonDiagnosticsOptions.enableSchemaRequest] is `true`, Monaco fetches
+  /// the schema definition from this URI.
   Uri get uri;
+
+  /// Glob patterns matched against the Monaco model URI (not file paths).
+  ///
+  /// Use `['*']` to apply this schema to every JSON model. For targeted
+  /// matching, set a meaningful URI when calling
+  /// [MonacoController.createModel] and use a pattern that matches it.
+  /// When `null`, the schema is registered but not automatically applied.
   List<String>? get fileMatch;
+
+  /// The JSON Schema definition as a Dart map.
+  ///
+  /// When provided, Monaco uses this directly instead of fetching from [uri].
+  /// The map should follow the JSON Schema specification (e.g. draft-07).
   Map<String, dynamic>? get schema;
 
   /// Create a copy of JsonDiagnosticsSchema
@@ -6370,10 +6443,26 @@ class _JsonDiagnosticsSchema extends JsonDiagnosticsSchema {
         _schema = schema,
         super._();
 
-  /// The URI of the schema to validate against.
+  /// Identifier for this schema. When [schema] is `null` and
+  /// [JsonDiagnosticsOptions.enableSchemaRequest] is `true`, Monaco fetches
+  /// the schema definition from this URI.
   @override
   final Uri uri;
+
+  /// Glob patterns matched against the Monaco model URI (not file paths).
+  ///
+  /// Use `['*']` to apply this schema to every JSON model. For targeted
+  /// matching, set a meaningful URI when calling
+  /// [MonacoController.createModel] and use a pattern that matches it.
+  /// When `null`, the schema is registered but not automatically applied.
   final List<String>? _fileMatch;
+
+  /// Glob patterns matched against the Monaco model URI (not file paths).
+  ///
+  /// Use `['*']` to apply this schema to every JSON model. For targeted
+  /// matching, set a meaningful URI when calling
+  /// [MonacoController.createModel] and use a pattern that matches it.
+  /// When `null`, the schema is registered but not automatically applied.
   @override
   List<String>? get fileMatch {
     final value = _fileMatch;
@@ -6383,7 +6472,16 @@ class _JsonDiagnosticsSchema extends JsonDiagnosticsSchema {
     return EqualUnmodifiableListView(value);
   }
 
+  /// The JSON Schema definition as a Dart map.
+  ///
+  /// When provided, Monaco uses this directly instead of fetching from [uri].
+  /// The map should follow the JSON Schema specification (e.g. draft-07).
   final Map<String, dynamic>? _schema;
+
+  /// The JSON Schema definition as a Dart map.
+  ///
+  /// When provided, Monaco uses this directly instead of fetching from [uri].
+  /// The map should follow the JSON Schema specification (e.g. draft-07).
   @override
   Map<String, dynamic>? get schema {
     final value = _schema;

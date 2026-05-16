@@ -1127,42 +1127,87 @@ sealed class FindMatch with _$FindMatch {
       };
 }
 
-/// Defines options for JSON diagnostics and schema validation.
+/// Configures Monaco's JSON language diagnostics and schema validation.
+///
+/// Pass an instance to [MonacoController.setJsonDiagnostics] to enable
+/// inline errors and warnings for JSON content. All fields are optional;
+/// `null` fields are omitted from the payload so Monaco keeps its own
+/// defaults for those settings.
+///
+/// ### Usage
+/// ```dart
+/// controller.setJsonDiagnostics(JsonDiagnosticsOptions(
+///   validate: true,
+///   allowComments: true,
+///   trailingCommas: DiagnosticsSeverity.warning,
+///   schemas: [JsonDiagnosticsSchema(...)],
+/// ));
+/// ```
 @freezed
 sealed class JsonDiagnosticsOptions with _$JsonDiagnosticsOptions {
   const factory JsonDiagnosticsOptions({
-    /// If set, comments are tolerated. If set to false, syntax errors will be emitted for comments
+    /// Whether to tolerate comments inside JSON.
+    ///
+    /// When `true`, comments are allowed without emitting syntax errors.
+    /// When `false`, Monaco treats comments as syntax errors. When `null`,
+    /// this field is omitted and Monaco keeps its bundled default (`true`).
+    /// See also [comments], which controls the diagnostic severity when
+    /// Monaco reports comments.
     bool? allowComments,
 
-    /// If set, the schema service would load schema content on-demand with 'fetch' if available
+    /// Whether Monaco should fetch remote schemas on demand using `fetch`.
+    ///
+    /// Requires the schema host to be allowed by the Content Security Policy.
+    /// The default CSP uses `connect-src 'self' blob:`, which blocks external
+    /// hosts. Remote schema fetches that fail are reported at the severity
+    /// configured by [schemaRequest].
     bool? enableSchemaRequest,
 
-    /// If set, the schema service would validate schemas and report errors.
+    /// Whether Monaco should validate JSON content against the provided
+    /// [schemas].
+    ///
+    /// Set to `true` to enable schema validation. When `null`, Monaco uses
+    /// its own default (enabled).
     bool? validate,
 
-    /// The severity level to use for schema request errors (e.g., if a schema fails to load).
-    /// Internally defaults to `warning` if not specified.
+    /// Severity for schema-fetch failures (e.g. network errors or 404s).
+    ///
+    /// Only relevant when [enableSchemaRequest] is `true`. Monaco defaults
+    /// to [DiagnosticsSeverity.warning] when `null`.
     DiagnosticsSeverity? schemaRequest,
 
-    /// The severity level to use for schema validation errors, `ignore` will disable validation.
-    /// Internally defaults to `warning` if not specified.
+    /// Severity for schema validation errors. Set to
+    /// [DiagnosticsSeverity.ignore] to suppress schema validation entirely.
+    ///
+    /// Monaco defaults to [DiagnosticsSeverity.warning] when `null`.
     DiagnosticsSeverity? schemaValidation,
 
-    /// The severity level to use for trailing comma errors.
-    /// Internally defaults to `error` if not specified.
+    /// Severity for trailing commas in JSON.
+    ///
+    /// Monaco defaults to [DiagnosticsSeverity.error] when `null`.
     DiagnosticsSeverity? trailingCommas,
 
-    /// The severity level to use for comments if `allowComments` is `true`.
-    /// Internally defaults to `error` if not specified and will override `allowComments`.
+    /// Severity for comments in JSON. Takes precedence over [allowComments]:
+    /// setting this to [DiagnosticsSeverity.ignore] suppresses comment
+    /// diagnostics regardless of the [allowComments] value.
+    ///
+    /// Monaco defaults to [DiagnosticsSeverity.error] when `null`.
     DiagnosticsSeverity? comments,
 
-    /// A list of known schemas and/or associations of schemas to file names.
+    /// Schema definitions and their file-match associations.
+    ///
+    /// Each [JsonDiagnosticsSchema] maps a JSON Schema to a set of model-URI
+    /// patterns. See [JsonDiagnosticsSchema.fileMatch] for matching details.
     List<JsonDiagnosticsSchema>? schemas,
   }) = _JsonDiagnosticsOptions;
 
   const JsonDiagnosticsOptions._();
 
-  /// Creates [JsonDiagnosticsOptions] from a JSON map.
+  /// Deserializes [JsonDiagnosticsOptions] from a JSON map.
+  ///
+  /// Severity strings are resolved via [DiagnosticsSeverity.fromId], which
+  /// falls back to [DiagnosticsSeverity.warning] for unrecognized values.
+  /// Missing keys produce `null` fields.
   factory JsonDiagnosticsOptions.fromJson(Map<String, dynamic> json) {
     return JsonDiagnosticsOptions(
       allowComments: json.tryGetBool('allowComments'),
@@ -1183,7 +1228,10 @@ sealed class JsonDiagnosticsOptions with _$JsonDiagnosticsOptions {
     );
   }
 
-  /// Converts the diagnostic options to a JSON-compatible map.
+  /// Serializes to a JSON map suitable for the Monaco JS bridge.
+  ///
+  /// `null` fields are omitted so Monaco keeps its own defaults for those
+  /// settings. Severity values are serialized as their string [DiagnosticsSeverity.id].
   Map<String, dynamic> toJson() => {
         if (validate != null) 'validate': validate,
         if (allowComments != null) 'allowComments': allowComments,
@@ -1198,32 +1246,47 @@ sealed class JsonDiagnosticsOptions with _$JsonDiagnosticsOptions {
       };
 }
 
-/// Represents a JSON schema definition for diagnostics and validation.
+/// Associates a JSON Schema with a set of Monaco model-URI patterns.
+///
+/// Used inside [JsonDiagnosticsOptions.schemas] to tell Monaco which schema
+/// applies to which JSON models. You can either inline the schema via
+/// [schema] or point to a remote schema via [uri] when
+/// [JsonDiagnosticsOptions.enableSchemaRequest] is `true`.
 @freezed
 sealed class JsonDiagnosticsSchema with _$JsonDiagnosticsSchema {
   const factory JsonDiagnosticsSchema({
-    /// The URI of the schema to validate against.
+    /// Identifier for this schema. When [schema] is `null` and
+    /// [JsonDiagnosticsOptions.enableSchemaRequest] is `true`, Monaco fetches
+    /// the schema definition from this URI.
     required Uri uri,
 
-    /// A list of patterns to match the model uri against. Use '*' if the schema
-    /// should apply to all models, otherwise make sure to use meaningful
-    /// uris for model creation that can be matched.
+    /// Glob patterns matched against the Monaco model URI (not file paths).
+    ///
+    /// Use `['*']` to apply this schema to every JSON model. For targeted
+    /// matching, set a meaningful URI when calling
+    /// [MonacoController.createModel] and use a pattern that matches it.
+    /// When `null`, the schema is registered but not automatically applied.
     List<String>? fileMatch,
 
-    /// The json schema definition itself.
+    /// The JSON Schema definition as a Dart map.
+    ///
+    /// When provided, Monaco uses this directly instead of fetching from [uri].
+    /// The map should follow the JSON Schema specification (e.g. draft-07).
     Map<String, dynamic>? schema,
   }) = _JsonDiagnosticsSchema;
 
   const JsonDiagnosticsSchema._();
 
-  /// Creates a [JsonDiagnosticsSchema] from a JSON map.
+  /// Deserializes a [JsonDiagnosticsSchema] from a JSON map.
+  ///
+  /// Accepts both `'uri'` and `'schemaUri'` as the schema identifier key.
+  /// Throws a `ConversionException` if neither key is present.
   factory JsonDiagnosticsSchema.fromJson(Map<String, dynamic> json) {
     return JsonDiagnosticsSchema(
       uri: Uri.parse(
         json.getString(
           'uri',
           alternativeKeys: ['schemaUri'],
-          defaultValue: 'http://unknown/schema',
         ),
       ),
       fileMatch: json.tryGetList<String>('fileMatch'),
@@ -1231,7 +1294,9 @@ sealed class JsonDiagnosticsSchema with _$JsonDiagnosticsSchema {
     );
   }
 
-  /// Converts the schema definition to a JSON-compatible map.
+  /// Serializes to a JSON map. Always outputs the `'uri'` key regardless of
+  /// which key was used during deserialization. `null` optional fields are
+  /// omitted.
   Map<String, dynamic> toJson() => {
         'uri': uri.toString(),
         if (fileMatch != null) 'fileMatch': fileMatch,

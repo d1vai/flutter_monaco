@@ -521,25 +521,39 @@ enum MonacoFont {
   static List<String> get all => MonacoFont.values.map((f) => f.value).toList();
 }
 
-/// Defines the severity levels for diagnostics (errors, warnings, etc.) in the editor.
+/// Severity levels for Monaco's JSON language diagnostics.
+///
+/// Used by [JsonDiagnosticsOptions] fields such as
+/// [JsonDiagnosticsOptions.schemaValidation] and
+/// [JsonDiagnosticsOptions.trailingCommas] to control how specific issues
+/// are surfaced in the editor.
+///
+/// This is separate from [MarkerSeverity], which controls inline markers
+/// set programmatically via [MonacoController.setMarkers].
 enum DiagnosticsSeverity {
-  /// Error severity level, typically marked with a red squiggly line.
+  /// Shown as a red squiggly underline. Blocks "no errors" status.
   error('error'),
 
-  /// Warning severity level, typically marked with a yellow squiggly line.
+  /// Shown as a yellow squiggly underline. Does not block "no errors" status.
   warning('warning'),
 
-  /// Ignored severity level, where diagnostics are not shown.
+  /// Suppresses the diagnostic entirely - no underline, no Problems entry.
   ignore('ignore');
 
-  /// The string value used by the Monaco Editor to represent this severity level.
+  /// The string value passed to Monaco's JavaScript API.
   final String id;
 
   const DiagnosticsSeverity(this.id);
 
-  /// Creates a [DiagnosticsSeverity] from its string [id].
-  static DiagnosticsSeverity fromId(String? id,
-      {DiagnosticsSeverity orElse = DiagnosticsSeverity.warning}) {
+  /// Resolves a Monaco severity string to a [DiagnosticsSeverity] value.
+  ///
+  /// Returns [orElse] (defaults to [warning]) when [id] is `null` or does
+  /// not match any known value. This makes it safe for parsing external or
+  /// user-provided configuration without throwing.
+  static DiagnosticsSeverity fromId(
+    String? id, {
+    DiagnosticsSeverity orElse = DiagnosticsSeverity.warning,
+  }) {
     if (id == null) return orElse;
     return DiagnosticsSeverity.values.firstWhere(
       (s) => s.id == id,

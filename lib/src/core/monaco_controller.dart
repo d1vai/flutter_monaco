@@ -259,9 +259,14 @@ class MonacoController {
     );
   }
 
-  /// Sets JSON diagnostics options.
+  /// Configures Monaco's built-in JSON diagnostics and schema validation.
   ///
-  /// Waits for the editor to be ready before applying.
+  /// This applies globally to all JSON models in the editor, not just the
+  /// active one. Call it once after the editor is ready (the method
+  /// internally awaits readiness). Calling it again replaces the previous
+  /// configuration entirely.
+  ///
+  /// See [JsonDiagnosticsOptions] for available settings and defaults.
   Future<void> setJsonDiagnostics(JsonDiagnosticsOptions diagnostics) async {
     await _ensureReady();
     await _webViewController.runJavaScript(

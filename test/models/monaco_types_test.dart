@@ -1,3 +1,4 @@
+import 'package:convert_object/convert_object.dart';
 import 'package:flutter_monaco/flutter_monaco.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -719,6 +720,136 @@ void main() {
           'schema': {'type': 'object'},
         },
       ]);
+    });
+
+    test('fromJson round-trip preserves all fields', () {
+      final original = JsonDiagnosticsOptions(
+        allowComments: true,
+        enableSchemaRequest: false,
+        validate: true,
+        trailingCommas: DiagnosticsSeverity.warning,
+        schemaRequest: DiagnosticsSeverity.error,
+        schemaValidation: DiagnosticsSeverity.warning,
+        comments: DiagnosticsSeverity.ignore,
+        schemas: [
+          JsonDiagnosticsSchema(
+            uri: Uri.parse('https://example.com/schema.json'),
+            fileMatch: ['*.json'],
+            schema: {'type': 'object'},
+          ),
+        ],
+      );
+
+      final restored = JsonDiagnosticsOptions.fromJson(original.toJson());
+
+      expect(restored.allowComments, original.allowComments);
+      expect(restored.enableSchemaRequest, original.enableSchemaRequest);
+      expect(restored.validate, original.validate);
+      expect(restored.trailingCommas, original.trailingCommas);
+      expect(restored.schemaRequest, original.schemaRequest);
+      expect(restored.schemaValidation, original.schemaValidation);
+      expect(restored.comments, original.comments);
+      expect(restored.schemas?.length, 1);
+      expect(
+        restored.schemas!.first.uri.toString(),
+        'https://example.com/schema.json',
+      );
+      expect(restored.schemas!.first.fileMatch, ['*.json']);
+      expect(restored.schemas!.first.schema, {'type': 'object'});
+    });
+
+    test('fromJson with empty map produces all-null fields', () {
+      final options = JsonDiagnosticsOptions.fromJson({});
+
+      expect(options.allowComments, isNull);
+      expect(options.enableSchemaRequest, isNull);
+      expect(options.validate, isNull);
+      expect(options.trailingCommas, isNull);
+      expect(options.schemaRequest, isNull);
+      expect(options.schemaValidation, isNull);
+      expect(options.comments, isNull);
+      expect(options.schemas, isNull);
+    });
+
+    test('toJson omits null fields', () {
+      final json = const JsonDiagnosticsOptions().toJson();
+      expect(json, isEmpty);
+    });
+  });
+
+  group('JsonDiagnosticsSchema', () {
+    test('toJson serializes all fields', () {
+      final schema = JsonDiagnosticsSchema(
+        uri: Uri.parse('https://example.com/schema.json'),
+        fileMatch: ['*.json', 'config.*'],
+        schema: {
+          'type': 'object',
+          'required': ['name']
+        },
+      );
+
+      final json = schema.toJson();
+
+      expect(json['uri'], 'https://example.com/schema.json');
+      expect(json['fileMatch'], ['*.json', 'config.*']);
+      expect(json['schema'], {
+        'type': 'object',
+        'required': ['name']
+      });
+    });
+
+    test('fromJson parses uri key', () {
+      final schema = JsonDiagnosticsSchema.fromJson({
+        'uri': 'https://example.com/schema.json',
+        'fileMatch': ['*.json'],
+      });
+
+      expect(schema.uri.toString(), 'https://example.com/schema.json');
+      expect(schema.fileMatch, ['*.json']);
+    });
+
+    test('fromJson parses schemaUri alias', () {
+      final schema = JsonDiagnosticsSchema.fromJson({
+        'schemaUri': 'https://example.com/alt.json',
+        'fileMatch': ['*'],
+      });
+
+      expect(schema.uri.toString(), 'https://example.com/alt.json');
+    });
+
+    test('fromJson throws when both uri and schemaUri are missing', () {
+      expect(
+        () => JsonDiagnosticsSchema.fromJson({
+          'fileMatch': ['*.json'],
+        }),
+        throwsA(isA<ConversionException>()),
+      );
+    });
+
+    test('round-trip preserves data', () {
+      final original = JsonDiagnosticsSchema(
+        uri: Uri.parse('https://example.com/schema.json'),
+        fileMatch: ['*.json'],
+        schema: {'type': 'object'},
+      );
+
+      final restored = JsonDiagnosticsSchema.fromJson(original.toJson());
+
+      expect(restored.uri, original.uri);
+      expect(restored.fileMatch, original.fileMatch);
+      expect(restored.schema, original.schema);
+    });
+
+    test('toJson omits null optional fields', () {
+      final schema = JsonDiagnosticsSchema(
+        uri: Uri.parse('https://example.com/schema.json'),
+      );
+
+      final json = schema.toJson();
+
+      expect(json['uri'], 'https://example.com/schema.json');
+      expect(json.containsKey('fileMatch'), false);
+      expect(json.containsKey('schema'), false);
     });
   });
 }
