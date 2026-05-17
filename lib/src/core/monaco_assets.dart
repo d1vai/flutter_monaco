@@ -440,7 +440,6 @@ class MonacoAssets {
     String? messageToken,
     String? customCss,
     bool allowCdnFonts = false,
-    bool gestureDebugEnabled = false,
   }) {
     // Platform-specific initialization scripts
     String platformScript = '';
@@ -969,47 +968,6 @@ class MonacoAssets {
                       const useTouchTapBridge = !usePointerTapBridge;
                       const useAndroidWebFocusGuard = usePointerTapBridge && isFlutterWebEmbed;
                       const now = () => Date.now();
-                      const debugModeFromSearch = (search) => {
-                        try {
-                          const match = /(?:^|[?&])monacoGestureDebug(?:=([^&]*))?/.exec(search || '');
-                          if (!match) return '';
-                          const value = decodeURIComponent(match[1] || '1');
-                          return value && value !== '0' && value !== 'false' ? value : '';
-                        } catch (_) {
-                          return '';
-                        }
-                      };
-                      const debugModeFromStorage = (storage) => {
-                        try {
-                          const value =
-                            storage?.getItem('flutterMonacoGestureDebug') ||
-                            storage?.getItem('monacoGestureDebug') ||
-                            '';
-                          return value && value !== '0' && value !== 'false' ? value : '';
-                        } catch (_) {
-                          return '';
-                        }
-                      };
-                      const getGestureDebugMode = () => {
-                        let mode =
-                          debugModeFromSearch(ownerWindow.location?.search) ||
-                          debugModeFromStorage(ownerWindow.localStorage);
-                        try {
-                          if (!mode && ownerWindow.parent && ownerWindow.parent !== ownerWindow) {
-                            mode =
-                              debugModeFromSearch(ownerWindow.parent.location?.search) ||
-                              debugModeFromStorage(ownerWindow.parent.localStorage);
-                          }
-                        } catch (_) {}
-                        if (mode) return mode;
-                        return ${gestureDebugEnabled ? 'true' : 'false'} ? '1' : '';
-                      };
-                      const mobileGestureDebugMode = getGestureDebugMode();
-                      const mobileGestureDebugEnabled = mobileGestureDebugMode !== '';
-                      const mobileGestureDebugVerbose =
-                        mobileGestureDebugMode === '2' ||
-                        mobileGestureDebugMode === 'verbose';
-                      const mobileGestureDebugLog = [];
                       const eventPoint = (event) => {
                         const touch =
                           event.changedTouches?.[0] || event.touches?.[0];
@@ -1077,13 +1035,11 @@ class MonacoAssets {
                       };
                       const suppressAndBlock = (event) => {
                         suppressCompatibilityEvents();
-                        debugMobileGesture('suppress-and-block', {}, event);
                         blockEvent(event);
                       };
                       const shouldBlockSuppressedEvent = () => now() < suppressUntil;
                       const blockSuppressedCompatibilityEvent = (event) => {
                         if (shouldBlockSuppressedEvent()) {
-                          debugMobileGesture('compatibility-event-blocked', {}, event);
                           blockEvent(event);
                         }
                       };
@@ -1109,13 +1065,6 @@ class MonacoAssets {
                           return node.querySelector(editorInputSelector);
                         } catch (_) {
                           return null;
-                        }
-                      };
-                      const isTextAreaFocused = () => {
-                        try {
-                          return isEditorInputElement(ownerDocument.activeElement);
-                        } catch (_) {
-                          return false;
                         }
                       };
                       const shouldSuppressFocus = () => now() < suppressFocusUntil;
@@ -1167,111 +1116,11 @@ class MonacoAssets {
                           );
                         }
                       } catch (_) {}
-                      const elementLabel = (element) => {
-                        if (!element) return 'null';
-                        try {
-                          let label = element.tagName ? element.tagName.toLowerCase() : String(element);
-                          const className = typeof element.className === 'string'
-                            ? element.className.trim()
-                            : '';
-                          if (className) {
-                            label += '.' + className.split(/\\s+/).slice(0, 4).join('.');
-                          }
-                          return label;
-                        } catch (_) {
-                          return 'unknown';
-                        }
-                      };
-                      const gestureSummary = (value) => value ? {
-                        id: value.id,
-                        kind: value.kind,
-                        moved: !!value.moved,
-                        cancelled: !!value.cancelled,
-                        hadInputFocusAtStart: !!value.hadInputFocusAtStart,
-                        ageMs: now() - value.startedAt,
-                      } : null;
-                      const touchGuardSummary = (value) => value ? {
-                        id: value.id,
-                        moved: !!value.moved,
-                        hadInputFocusAtStart: !!value.hadInputFocusAtStart,
-                      } : null;
-                      const eventSummary = (event) => {
-                        const point = event ? eventPoint(event) : null;
-                        const scroll = getScrollSnapshot();
-                        return {
-                          type: event?.type,
-                          cancelable: !!event?.cancelable,
-                          defaultPrevented: !!event?.defaultPrevented,
-                          pointerType: event?.pointerType,
-                          pointerId: event?.pointerId,
-                          isPrimary: event?.isPrimary,
-                          touches: event?.touches?.length,
-                          changedTouches: event?.changedTouches?.length,
-                          x: point?.x,
-                          y: point?.y,
-                          scrollTop: scroll.top,
-                          scrollLeft: scroll.left,
-                          activeElement: elementLabel(ownerDocument.activeElement),
-                          textAreaFocused: isTextAreaFocused(),
-                          keyboardLikelyVisible: isKeyboardLikelyVisible(),
-                          suppressUntilMs: Math.max(0, suppressUntil - now()),
-                          suppressFocusUntilMs: Math.max(0, suppressFocusUntil - now()),
-                        };
-                      };
-                      const debugMobileGesture = (phase, payload, event) => {
-                        if (!mobileGestureDebugEnabled) return;
-                        try {
-                          const entry = {
-                            event: 'mobileGestureDebug',
-                            phase,
-                            t: now(),
-                            mode: mobileGestureDebugMode,
-                            platform: {
-                              isAndroid,
-                              isFlutterWebEmbed,
-                              supportsPointerEvents,
-                              usePointerTapBridge,
-                              useTouchTapBridge,
-                              useAndroidWebFocusGuard,
-                            },
-                            state: {
-                              gesture: gestureSummary(gesture),
-                              androidTouchScrollGesture:
-                                touchGuardSummary(androidTouchScrollGesture),
-                            },
-                            input: event ? eventSummary(event) : undefined,
-                            data: payload || {},
-                          };
-                          mobileGestureDebugLog.push(entry);
-                          if (mobileGestureDebugLog.length > 250) {
-                            mobileGestureDebugLog.shift();
-                          }
-                          try {
-                            ownerWindow.flutterMonacoGestureDebugLog =
-                              mobileGestureDebugLog;
-                          } catch (_) {}
-                          try {
-                            console.log('[flutter_monaco][gesture]', JSON.stringify(entry));
-                          } catch (_) {
-                            try { console.log('[flutter_monaco][gesture]', entry); } catch (_) {}
-                          }
-                          try { postMessageToFlutter(entry); } catch (_) {}
-                        } catch (_) {}
-                      };
-                      try {
-                        window.flutterMonaco.getGestureDebugLog =
-                          () => mobileGestureDebugLog.slice();
-                        window.flutterMonaco.clearGestureDebugLog =
-                          () => { mobileGestureDebugLog.length = 0; };
-                      } catch (_) {}
                       const blurTextAreaIfFocusSuppressed = () => {
                         if (!shouldSuppressFocus()) return;
                         try {
                           const input = getEditorInputElement();
                           if (input && ownerDocument.activeElement === input) {
-                            debugMobileGesture('blur-suppressed-textarea', {
-                              reason: 'focus suppressed after scroll',
-                            });
                             input.blur();
                           }
                         } catch (_) {}
@@ -1281,16 +1130,10 @@ class MonacoAssets {
                         try { ownerWindow.setTimeout(blurTextAreaIfFocusSuppressed, 0); } catch (_) {}
                         try { ownerWindow.setTimeout(blurTextAreaIfFocusSuppressed, 50); } catch (_) {}
                       };
-                      const suppressScrollFocusIfNeeded = (hadInputFocusAtStart) => {
+                      const suppressScrollFocusIfNeeded = () => {
                         if (!useAndroidWebFocusGuard) return;
                         suppressFocusUntil = now() + compatibilityEventSuppressMs;
                         const keyboardVisible = isKeyboardLikelyVisible();
-                        debugMobileGesture('suppress-scroll-focus', {
-                          suppressForMs: compatibilityEventSuppressMs,
-                          hadInputFocusAtStart: !!hadInputFocusAtStart,
-                          keyboardLikelyVisible: keyboardVisible,
-                          willBlurEditorInput: !keyboardVisible,
-                        });
                         if (!keyboardVisible) {
                           scheduleSuppressedTextAreaBlur();
                         }
@@ -1299,16 +1142,8 @@ class MonacoAssets {
                         if (!useAndroidWebFocusGuard || !shouldSuppressFocus()) return;
                         const target = event?.target;
                         if (isEditorInputElement(target)) {
-                          debugMobileGesture('guard-blocked-textarea-focus', {}, event);
                           blurTextAreaIfFocusSuppressed();
                           blockEvent(event);
-                        }
-                      };
-                      const logTextAreaFocusEvent = (event) => {
-                        if (!mobileGestureDebugEnabled) return;
-                        const target = event?.target;
-                        if (isEditorInputElement(target)) {
-                          debugMobileGesture('textarea-' + event.type, {}, event);
                         }
                       };
                       const beginGesture = (event, id, kind) => {
@@ -1323,31 +1158,24 @@ class MonacoAssets {
                           startedAt: now(),
                           moved: false,
                           cancelled: false,
-                          hadInputFocusAtStart: isTextAreaFocused(),
                           scrollTop: scroll.top,
                           scrollLeft: scroll.left,
                         };
-                        debugMobileGesture('gesture-begin', { id, kind }, event);
                       };
                       const updateGesture = (event, id, kind) => {
                         if (!gesture || gesture.id !== id || gesture.kind !== kind) return;
                         if (hasMovedFromStart(event)) {
-                          const firstMove = !gesture.moved;
                           gesture.moved = true;
-                          if (firstMove || mobileGestureDebugVerbose) {
-                            debugMobileGesture('gesture-moved', { id, kind }, event);
-                          }
                           if (useAndroidWebFocusGuard) {
                             suppressCompatibilityEvents();
-                            suppressScrollFocusIfNeeded(gesture.hadInputFocusAtStart);
+                            suppressScrollFocusIfNeeded();
                           }
                         }
                       };
                       const cancelGesture = (event, id, kind) => {
                         if (!gesture || gesture.id !== id || gesture.kind !== kind) return;
                         gesture.cancelled = true;
-                        debugMobileGesture('gesture-cancel', { id, kind }, event);
-                        suppressScrollFocusIfNeeded(gesture.hadInputFocusAtStart);
+                        suppressScrollFocusIfNeeded();
                         suppressAndBlock(event);
                         gesture = null;
                       };
@@ -1364,17 +1192,9 @@ class MonacoAssets {
                           !gesture.cancelled &&
                           !gesture.moved &&
                           elapsed <= tapTimeThreshold;
-                        const hadInputFocusAtStart = gesture.hadInputFocusAtStart;
-                        debugMobileGesture('gesture-end', {
-                          id,
-                          kind,
-                          elapsed,
-                          shouldFocus,
-                          hadInputFocusAtStart,
-                        }, event);
                         gesture = null;
                         if (!shouldFocus) {
-                          suppressScrollFocusIfNeeded(hadInputFocusAtStart);
+                          suppressScrollFocusIfNeeded();
                           suppressAndBlock(event);
                           return;
                         }
@@ -1383,7 +1203,6 @@ class MonacoAssets {
                         const currentTime = now();
                         if (currentTime - lastFocusAt < 150) return;
                         lastFocusAt = currentTime;
-                        debugMobileGesture('focus-from-gesture', { id, kind }, event);
                         focusEditorTextAreaNow();
                       };
                       const pointerId = (event) =>
@@ -1438,28 +1257,16 @@ class MonacoAssets {
                           x: point.x,
                           y: point.y,
                           moved: false,
-                          hadInputFocusAtStart: isTextAreaFocused(),
                           scrollTop: scroll.top,
                           scrollLeft: scroll.left,
                         };
-                        debugMobileGesture('android-touch-guard-begin', {
-                          id: touch.identifier,
-                        }, event);
                       };
                       const updateAndroidTouchScrollGuard = (event) => {
                         if (!useAndroidWebFocusGuard || !androidTouchScrollGesture) return;
                         if (hasTouchScrollMovedFromStart(event)) {
-                          const firstMove = !androidTouchScrollGesture.moved;
                           androidTouchScrollGesture.moved = true;
-                          if (firstMove || mobileGestureDebugVerbose) {
-                            debugMobileGesture('android-touch-guard-moved', {
-                              id: androidTouchScrollGesture.id,
-                            }, event);
-                          }
                           suppressCompatibilityEvents();
-                          suppressScrollFocusIfNeeded(
-                            androidTouchScrollGesture.hadInputFocusAtStart
-                          );
+                          suppressScrollFocusIfNeeded();
                         }
                       };
                       const endAndroidTouchScrollGuard = (event) => {
@@ -1474,10 +1281,6 @@ class MonacoAssets {
                         const shouldBlock =
                           androidTouchScrollGesture.moved ||
                           shouldBlockSuppressedEvent();
-                        debugMobileGesture('android-touch-guard-end', {
-                          id: androidTouchScrollGesture.id,
-                          shouldBlock,
-                        }, event);
                         androidTouchScrollGesture = null;
                         if (shouldBlock) {
                           blockEvent(event);
@@ -1485,30 +1288,14 @@ class MonacoAssets {
                       };
                       const cancelAndroidTouchScrollGuard = (event) => {
                         if (!useAndroidWebFocusGuard || !androidTouchScrollGesture) return;
-                        debugMobileGesture('android-touch-guard-cancel', {
-                          id: androidTouchScrollGesture.id,
-                        }, event);
                         suppressCompatibilityEvents();
-                        suppressScrollFocusIfNeeded(
-                          androidTouchScrollGesture.hadInputFocusAtStart
-                        );
+                        suppressScrollFocusIfNeeded();
                         androidTouchScrollGesture = null;
                         blockEvent(event);
                       };
                       const capturePassiveFalse = { capture: true, passive: false };
                       const capturePassiveTrue = { capture: true, passive: true };
                       const captureOnly = { capture: true };
-                      debugMobileGesture('bridge-init', {
-                        ua,
-                        tapMoveThreshold,
-                        tapTimeThreshold,
-                        compatibilityEventSuppressMs,
-                      });
-
-                      try {
-                        E().onDidFocusEditorWidget(() => debugMobileGesture('monaco-focus', {}));
-                        E().onDidBlurEditorWidget(() => debugMobileGesture('monaco-blur', {}));
-                      } catch (_) {}
 
                       if (usePointerTapBridge) {
                         ownerDocument.addEventListener('pointerdown', onPointerDown, captureOnly);
@@ -1522,8 +1309,6 @@ class MonacoAssets {
                         ownerDocument.addEventListener('touchmove', updateAndroidTouchScrollGuard, capturePassiveFalse);
                         ownerDocument.addEventListener('touchend', endAndroidTouchScrollGuard, capturePassiveFalse);
                         ownerDocument.addEventListener('touchcancel', cancelAndroidTouchScrollGuard, capturePassiveFalse);
-                        ownerDocument.addEventListener('focusin', logTextAreaFocusEvent, captureOnly);
-                        ownerDocument.addEventListener('focusout', logTextAreaFocusEvent, captureOnly);
                         ownerDocument.addEventListener('focus', guardSuppressedTextAreaFocus, captureOnly);
                         ownerDocument.addEventListener('focusin', guardSuppressedTextAreaFocus, captureOnly);
                       }

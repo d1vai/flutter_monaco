@@ -114,11 +114,6 @@ void main() {
       expect(html, contains('supportsPointerEvents && isAndroid'));
       expect(html, contains('const useTouchTapBridge = !usePointerTapBridge'));
       expect(html, contains('const useAndroidWebFocusGuard ='));
-      expect(html,
-          contains('const mobileGestureDebugMode = getGestureDebugMode();'));
-      expect(html, contains('const debugMobileGesture ='));
-      expect(html, contains("event: 'mobileGestureDebug'"));
-      expect(html, contains('window.flutterMonaco.getGestureDebugLog'));
       expect(html, contains('const getScrollSnapshot = () =>'));
       expect(html, contains('ed.getScrollTop'));
       expect(html, contains('ed.getScrollLeft'));
@@ -135,12 +130,8 @@ void main() {
       expect(html, contains('const getEditorInputElement ='));
       expect(html, contains('let maxObservedViewportHeight = 0'));
       expect(html, contains('const isKeyboardLikelyVisible ='));
-      expect(
-          html, contains('keyboardLikelyVisible: isKeyboardLikelyVisible()'));
       expect(html, contains('const suppressScrollFocusIfNeeded ='));
-      expect(html, contains('willBlurEditorInput: !keyboardVisible'));
       expect(html, contains('const guardSuppressedTextAreaFocus ='));
-      expect(html, contains('const logTextAreaFocusEvent ='));
       expect(html, contains('const endGesture = (event, id, kind) =>'));
       expect(html, contains('suppressAndBlock(event);'));
       expect(html, contains('const capturePassiveFalse ='));
@@ -172,28 +163,13 @@ void main() {
       expect(
         html,
         contains(
-          "ownerDocument.addEventListener('focusin', logTextAreaFocusEvent",
-        ),
-      );
-      expect(
-        html,
-        contains(
           "ownerDocument.addEventListener('click', blockSuppressedCompatibilityEvent",
         ),
       );
       expect(html, contains('node.style.touchAction'));
       expect(html, isNot(contains('focusFromClick')));
-    });
-
-    test('generated html can compile-enable mobile gesture debug logging', () {
-      final html = MonacoAssets.generateIndexHtml(
-        'min/vs',
-        gestureDebugEnabled: true,
-      );
-
-      expect(html, contains("return true ? '1' : '';"));
-      expect(html, contains('[flutter_monaco][gesture]'));
-      expect(html, contains('postMessageToFlutter(entry);'));
+      expect(html, isNot(contains('mobileGestureDebug')));
+      expect(html, isNot(contains('monacoGestureDebug')));
     });
 
     test('generated html keeps desktop preventScroll focus retry', () {
