@@ -41,6 +41,8 @@ void main() {
     expect(source, contains('const maxLoadAttempts = 2'));
     expect(source, contains('_readyCompleter = Completer<void>();'));
     expect(source, contains("_iframe?.src = 'about:blank';"));
+    expect(source, contains("containsKey('monacoGestureDebug')"));
+    expect(source, contains('gestureDebugEnabled:'));
     expect(source, contains(r'Monaco load attempt $attempt failed, retrying'));
   });
 

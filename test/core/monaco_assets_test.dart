@@ -104,18 +104,43 @@ void main() {
       expect(html, contains('const ownerDocument = node.ownerDocument'));
       expect(html, contains('const ownerWindow = ownerDocument.defaultView'));
       expect(html, contains('const isAndroid = /Android/i.test(ua)'));
+      expect(html, contains('const isFlutterWebEmbed = (() =>'));
       expect(html, contains('const tapMoveThreshold = 8'));
       expect(html, contains('const tapTimeThreshold = 650'));
       expect(html, contains('const compatibilityEventSuppressMs = 1200'));
+      expect(html, contains('let androidTouchScrollGesture = null'));
+      expect(html, contains('let suppressFocusUntil = 0'));
       expect(html, contains('const usePointerTapBridge ='));
       expect(html, contains('supportsPointerEvents && isAndroid'));
       expect(html, contains('const useTouchTapBridge = !usePointerTapBridge'));
+      expect(html, contains('const useAndroidWebFocusGuard ='));
+      expect(html,
+          contains('const mobileGestureDebugMode = getGestureDebugMode();'));
+      expect(html, contains('const debugMobileGesture ='));
+      expect(html, contains("event: 'mobileGestureDebug'"));
+      expect(html, contains('window.flutterMonaco.getGestureDebugLog'));
       expect(html, contains('const getScrollSnapshot = () =>'));
       expect(html, contains('ed.getScrollTop'));
       expect(html, contains('ed.getScrollLeft'));
       expect(html, contains('const hasMovedFromStart = (event) =>'));
+      expect(
+        html,
+        contains('const hasTouchScrollMovedFromStart = (event) =>'),
+      );
       expect(html, contains('const blockEvent = (event) =>'));
       expect(html, contains('const suppressAndBlock = (event) =>'));
+      expect(html, contains('const editorInputSelector ='));
+      expect(html, contains('textarea.inputarea, .native-edit-context'));
+      expect(html, contains('const isEditorInputElement ='));
+      expect(html, contains('const getEditorInputElement ='));
+      expect(html, contains('let maxObservedViewportHeight = 0'));
+      expect(html, contains('const isKeyboardLikelyVisible ='));
+      expect(
+          html, contains('keyboardLikelyVisible: isKeyboardLikelyVisible()'));
+      expect(html, contains('const suppressScrollFocusIfNeeded ='));
+      expect(html, contains('willBlurEditorInput: !keyboardVisible'));
+      expect(html, contains('const guardSuppressedTextAreaFocus ='));
+      expect(html, contains('const logTextAreaFocusEvent ='));
       expect(html, contains('const endGesture = (event, id, kind) =>'));
       expect(html, contains('suppressAndBlock(event);'));
       expect(html, contains('const capturePassiveFalse ='));
@@ -135,14 +160,40 @@ void main() {
       expect(
         html,
         contains(
+          "ownerDocument.addEventListener('touchend', endAndroidTouchScrollGuard, capturePassiveFalse",
+        ),
+      );
+      expect(
+        html,
+        contains(
+          "ownerDocument.addEventListener('focusin', guardSuppressedTextAreaFocus",
+        ),
+      );
+      expect(
+        html,
+        contains(
+          "ownerDocument.addEventListener('focusin', logTextAreaFocusEvent",
+        ),
+      );
+      expect(
+        html,
+        contains(
           "ownerDocument.addEventListener('click', blockSuppressedCompatibilityEvent",
         ),
       );
       expect(html, contains('node.style.touchAction'));
       expect(html, isNot(contains('focusFromClick')));
-      expect(html, isNot(contains('guardTextareaFocus')));
-      expect(html, isNot(contains('__flutterMonacoScrollFocusGuard')));
-      expect(html, isNot(contains('new MutationObserver(guardTextareaFocus)')));
+    });
+
+    test('generated html can compile-enable mobile gesture debug logging', () {
+      final html = MonacoAssets.generateIndexHtml(
+        'min/vs',
+        gestureDebugEnabled: true,
+      );
+
+      expect(html, contains("return true ? '1' : '';"));
+      expect(html, contains('[flutter_monaco][gesture]'));
+      expect(html, contains('postMessageToFlutter(entry);'));
     });
 
     test('generated html keeps desktop preventScroll focus retry', () {

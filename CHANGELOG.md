@@ -3,11 +3,13 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.1] - 2026-05-16
+## [1.5.1] - 2026-05-17
 
 ### Fixed
-- Fixed mobile soft keyboard focus handling for `MonacoEditor` on Android and iOS by letting the WebView own the tap-to-input gesture path.
-- Disabled mobile native programmatic autofocus because Android and iOS soft keyboards require a user gesture to open reliably.
+- Fixed soft keyboard activation for `MonacoEditor` on native Android and iOS by letting the platform view own the tap-to-input gesture path.
+- Fixed Android Flutter Web scroll gestures so scrolling focused Monaco content no longer opens the keyboard on release, while preserving intentional keyboard-open scrolling.
+- Fixed a Flutter Web first-load race by waiting for iframe attachment and retrying transient Monaco load failures.
+- Fixed the example iOS runner build configuration.
 
 ## [1.5.0] - 2026-05-16
 

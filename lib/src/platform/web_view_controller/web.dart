@@ -297,6 +297,8 @@ class WebViewController implements PlatformWebViewController {
         messageToken: _messageToken,
         customCss: customCss,
         allowCdnFonts: allowCdnFonts,
+        gestureDebugEnabled:
+            Uri.base.queryParameters.containsKey('monacoGestureDebug'),
       );
 
       final blobUrl = web.URL.createObjectURL(web.Blob(
