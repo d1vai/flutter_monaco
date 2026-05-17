@@ -50,7 +50,7 @@ class WebViewController implements PlatformWebViewController {
   bool _disposed = false;
   bool _interactionEnabled = true;
 
-  final Completer<void> _readyCompleter = Completer<void>();
+  Completer<void> _readyCompleter = Completer<void>();
   bool _isReady = false;
 
   web.HTMLIFrameElement? _iframe;
@@ -135,14 +135,18 @@ class WebViewController implements PlatformWebViewController {
     }
 
     // Check if this is the ready event
-    if (message == 'ready' ||
-        message.contains('"event":"onEditorReady"') ||
-        message.contains('"event": "onEditorReady"')) {
+    final eventName = json?['event'];
+    if (message == 'ready' || eventName == 'onEditorReady') {
       _isReady = true;
       if (!_readyCompleter.isCompleted) {
         _readyCompleter.complete();
       }
       debugPrint('[WebViewController] Monaco ready!');
+    } else if (eventName == 'error' && !_isReady) {
+      final errorMessage = json?['message'] ?? 'Unknown Monaco load error';
+      if (!_readyCompleter.isCompleted) {
+        _readyCompleter.completeError(StateError(errorMessage.toString()));
+      }
     }
 
     // When Monaco reports focus, unfocus Flutter widgets.
@@ -272,33 +276,64 @@ class WebViewController implements PlatformWebViewController {
   @override
   Future<void> load({String? customCss, bool allowCdnFonts = false}) async {
     debugPrint('[WebViewController] Loading Monaco in iframe');
+    await _waitForIframeAttachment();
 
     // Resolve path against base URI to support subpaths
     final vsPath = Uri.base
         .resolve('assets/${MonacoAssets.assetBaseDir}/min/vs')
         .toString();
 
-    final html = MonacoAssets.generateIndexHtml(
-      vsPath,
-      isWindows: false,
-      isIosOrMacOS: false,
-      isWeb: true,
-      messageToken: _messageToken,
-      customCss: customCss,
-      allowCdnFonts: allowCdnFonts,
-    );
+    Object? lastError;
+    const maxLoadAttempts = 2;
+    for (var attempt = 1; attempt <= maxLoadAttempts; attempt++) {
+      _isReady = false;
+      _readyCompleter = Completer<void>();
 
-    // Create a blob URL for the HTML content
-    final blobUrl = web.URL.createObjectURL(web.Blob(
-      [html.toJS].toJS,
-      web.BlobPropertyBag(type: 'text/html'),
-    ));
-    _iframe!.src = blobUrl;
+      final html = MonacoAssets.generateIndexHtml(
+        vsPath,
+        isWindows: false,
+        isIosOrMacOS: false,
+        isWeb: true,
+        messageToken: _messageToken,
+        customCss: customCss,
+        allowCdnFonts: allowCdnFonts,
+      );
 
-    await _ensureReady();
+      final blobUrl = web.URL.createObjectURL(web.Blob(
+        [html.toJS].toJS,
+        web.BlobPropertyBag(type: 'text/html'),
+      ));
 
-    // Clean up blob URL after Monaco is ready
-    web.URL.revokeObjectURL(blobUrl);
+      try {
+        _iframe!.src = blobUrl;
+        await _ensureReady();
+        web.URL.revokeObjectURL(blobUrl);
+        return;
+      } catch (e) {
+        lastError = e;
+        web.URL.revokeObjectURL(blobUrl);
+        if (attempt == maxLoadAttempts) {
+          rethrow;
+        }
+        debugPrint(
+          '[WebViewController] Monaco load attempt $attempt failed, retrying: $e',
+        );
+        _iframe?.src = 'about:blank';
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+    }
+
+    throw StateError('Monaco iframe failed to load: $lastError');
+  }
+
+  Future<void> _waitForIframeAttachment() async {
+    final iframe = _iframe;
+    if (iframe == null || iframe.isConnected) return;
+
+    const maxFrames = 120;
+    for (var i = 0; i < maxFrames && !iframe.isConnected; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 16));
+    }
   }
 
   @override

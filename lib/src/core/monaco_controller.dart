@@ -251,6 +251,7 @@ class MonacoController {
   Future<void> setLanguage(MonacoLanguage language) async {
     if (!_onReady.isCompleted) {
       _queuedLanguage = language;
+      if (kIsWeb) return;
       await _ensureReady();
       if (_queuedLanguage == language) {
         // Only use queued value if it hasn't been overwritten
@@ -732,6 +733,7 @@ class MonacoController {
   Future<void> setValue(String value) async {
     if (!_onReady.isCompleted) {
       _queuedValue = value;
+      if (kIsWeb) return;
       await _ensureReady();
       if (_queuedValue == value) {
         // Only use queued value if it hasn't been overwritten

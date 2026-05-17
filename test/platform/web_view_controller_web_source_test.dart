@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  String webControllerSource() =>
+      File('lib/src/platform/web_view_controller/web.dart').readAsStringSync();
+
   test('web focus handler only amplifies Monaco focus on desktop', () {
-    final source = File('lib/src/platform/web_view_controller/web.dart')
-        .readAsStringSync();
+    final source = webControllerSource();
     final focusBlockStart = source
         .indexOf('// When Monaco reports focus, unfocus Flutter widgets.');
     final focusBlockEnd = source.indexOf('// Forward to all channels');
@@ -23,5 +25,30 @@ void main() {
     expect(source, contains('bool _isMobileInputPlatform()'));
     expect(source, contains('TargetPlatform.android'));
     expect(source, contains('TargetPlatform.iOS'));
+  });
+
+  test('web load waits for iframe attachment before assigning blob URL', () {
+    final source = webControllerSource();
+
+    expect(source, contains('await _waitForIframeAttachment();'));
+    expect(source, contains('Future<void> _waitForIframeAttachment() async'));
+    expect(source, contains('iframe.isConnected'));
+  });
+
+  test('web load retries transient Monaco iframe load failures', () {
+    final source = webControllerSource();
+
+    expect(source, contains('const maxLoadAttempts = 2'));
+    expect(source, contains('_readyCompleter = Completer<void>();'));
+    expect(source, contains("_iframe?.src = 'about:blank';"));
+    expect(source, contains(r'Monaco load attempt $attempt failed, retrying'));
+  });
+
+  test('web error messages fail the current load attempt', () {
+    final source = webControllerSource();
+
+    expect(source, contains("eventName == 'error' && !_isReady"));
+    expect(source, contains('_readyCompleter.completeError'));
+    expect(source, contains('Unknown Monaco load error'));
   });
 }
