@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_monaco/flutter_monaco.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import 'custom_font_example.dart';
 import 'focus_test_example.dart';
+import 'monaco_observer.dart';
 import 'multi_editor_example.dart';
 
 void main() {
@@ -20,6 +22,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
+      navigatorObservers: [monacoRouteObserver],
       home: const MonacoExamplePage(),
     );
   }
@@ -255,6 +258,12 @@ class _MonacoExamplePageState extends State<MonacoExamplePage> {
               ],
             ),
           ),
+          // Keep Flutter dialogs/menus clickable over the editor on Web.
+          if (_controller != null)
+            MonacoFocusGuard(
+              controller: _controller!,
+              modalRouteObserver: monacoRouteObserver,
+            ),
           // Editor
           Expanded(
             child: _isLoading
@@ -272,79 +281,91 @@ class _MonacoExamplePageState extends State<MonacoExamplePage> {
           ),
         ],
       ),
+      // Each FAB is wrapped individually with PointerInterceptor so the
+      // underlying Monaco iframe cannot swallow the click on Web. Wrapping
+      // the whole Row does not work reliably - the official pattern is one
+      // interceptor per interactive element.
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           // Focus test button
-          FloatingActionButton(
-            heroTag: 'focus',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const FocusTestExample(),
-                ),
-              );
-            },
-            backgroundColor: Colors.purple,
-            child: const Icon(Icons.bug_report),
+          PointerInterceptor(
+            child: FloatingActionButton(
+              heroTag: 'focus',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const FocusTestExample(),
+                  ),
+                );
+              },
+              backgroundColor: Colors.purple,
+              child: const Icon(Icons.bug_report),
+            ),
           ),
           const SizedBox(width: 8),
           // Multi-editor demo button
-          FloatingActionButton.extended(
-            heroTag: 'multi',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const MultiEditorExample(),
-                ),
-              );
-            },
-            label: const Text('Multi-Editor'),
-            icon: const Icon(Icons.view_column),
-            backgroundColor: Colors.green,
+          PointerInterceptor(
+            child: FloatingActionButton.extended(
+              heroTag: 'multi',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const MultiEditorExample(),
+                  ),
+                );
+              },
+              label: const Text('Multi-Editor'),
+              icon: const Icon(Icons.view_column),
+              backgroundColor: Colors.green,
+            ),
           ),
           const SizedBox(width: 8),
           // Custom font demo button
-          FloatingActionButton.extended(
-            heroTag: 'font',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const CustomFontExample(),
-                ),
-              );
-            },
-            label: const Text('Custom Fonts'),
-            icon: const Icon(Icons.font_download),
-            backgroundColor: Colors.orange,
+          PointerInterceptor(
+            child: FloatingActionButton.extended(
+              heroTag: 'font',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const CustomFontExample(),
+                  ),
+                );
+              },
+              label: const Text('Custom Fonts'),
+              icon: const Icon(Icons.font_download),
+              backgroundColor: Colors.orange,
+            ),
           ),
           const SizedBox(width: 16),
           // Get content button
-          FloatingActionButton.extended(
-            heroTag: 'content',
-            onPressed: () async {
-              final content = await _controller?.getValue();
-              if (content != null && context.mounted) {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Editor Content'),
-                    content: SingleChildScrollView(
-                      child: Text(content.substring(
-                          0, content.length > 500 ? 500 : content.length)),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Close'),
+          PointerInterceptor(
+            child: FloatingActionButton.extended(
+              heroTag: 'content',
+              onPressed: () async {
+                final content = await _controller?.getValue();
+                if (content != null && context.mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Editor Content'),
+                      content: SingleChildScrollView(
+                        child: Text(content.substring(
+                            0, content.length > 500 ? 500 : content.length)),
                       ),
-                    ],
-                  ),
-                );
-              }
-            },
-            label: const Text('Get Content'),
-            icon: const Icon(Icons.download),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              },
+              label: const Text('Get Content'),
+              icon: const Icon(Icons.download),
+            ),
           ),
         ],
       ),

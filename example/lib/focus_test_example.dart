@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_monaco/flutter_monaco.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
+
+import 'monaco_observer.dart';
 
 class FocusTestExample extends StatefulWidget {
   const FocusTestExample({super.key});
@@ -46,71 +49,86 @@ class _FocusTestExampleState extends State<FocusTestExample> {
         title: const Text('Focus Test'),
         backgroundColor: Colors.purple,
       ),
-      body: Row(
+      body: Column(
         children: [
-          // Left: Monaco Editor
+          // Keep the dialog clickable over the editor on Web.
+          if (_controller != null)
+            MonacoFocusGuard(
+              controller: _controller!,
+              modalRouteObserver: monacoRouteObserver,
+            ),
           Expanded(
-            child: _controller?.webViewWidget ??
-                const Center(child: CircularProgressIndicator()),
-          ),
-          const VerticalDivider(width: 1),
-          // Right: Flutter TextField
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                controller: _textController,
-                maxLines: null,
-                expands: true,
-                style: const TextStyle(fontFamily: 'monospace'),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Type here...',
+            child: Row(
+              children: [
+                // Left: Monaco Editor
+                Expanded(
+                  child: _controller?.webViewWidget ??
+                      const Center(child: CircularProgressIndicator()),
                 ),
-              ),
+                const VerticalDivider(width: 1),
+                // Right: Flutter TextField
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: TextField(
+                      controller: _textController,
+                      maxLines: null,
+                      expands: true,
+                      style: const TextStyle(fontFamily: 'monospace'),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Type here...',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
-      // Dialog button at bottom
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) {
-              String dialogText = '';
-              return AlertDialog(
-                title: const Text('Type to Monaco'),
-                content: TextField(
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Type here to send to Monaco...',
+      // PointerInterceptor stops the underlying Monaco iframe from stealing
+      // the click on Web so this FAB is reachable over the editor.
+      floatingActionButton: PointerInterceptor(
+        child: FloatingActionButton.extended(
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) {
+                String dialogText = '';
+                return AlertDialog(
+                  title: const Text('Type to Monaco'),
+                  content: TextField(
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Type here to send to Monaco...',
+                    ),
+                    onChanged: (value) => dialogText = value,
                   ),
-                  onChanged: (value) => dialogText = value,
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      // Send dialog text to Monaco
-                      final current = await _controller?.getValue() ?? '';
-                      await _controller
-                          ?.setValue('$current\n// From dialog: $dialogText');
-                    },
-                    child: const Text('Send to Monaco'),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-        label: const Text('Open Dialog'),
-        icon: const Icon(Icons.open_in_new),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        // Send dialog text to Monaco
+                        final current = await _controller?.getValue() ?? '';
+                        await _controller
+                            ?.setValue('$current\n// From dialog: $dialogText');
+                      },
+                      child: const Text('Send to Monaco'),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+          label: const Text('Open Dialog'),
+          icon: const Icon(Icons.open_in_new),
+        ),
       ),
     );
   }

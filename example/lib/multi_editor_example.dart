@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_monaco/flutter_monaco.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
+
+import 'monaco_observer.dart';
 
 class MultiEditorExample extends StatefulWidget {
   const MultiEditorExample({super.key});
@@ -162,6 +165,19 @@ class _MultiEditorExampleState extends State<MultiEditorExample> {
       ),
       body: Column(
         children: [
+          // Keep Flutter dialogs/menus clickable over each editor on Web.
+          MonacoFocusGuard(
+            controller: _leftController!,
+            modalRouteObserver: monacoRouteObserver,
+          ),
+          MonacoFocusGuard(
+            controller: _rightController!,
+            modalRouteObserver: monacoRouteObserver,
+          ),
+          MonacoFocusGuard(
+            controller: _bottomController!,
+            modalRouteObserver: monacoRouteObserver,
+          ),
           // Top section - Split view
           Expanded(
             flex: 2,
@@ -220,43 +236,47 @@ class _MultiEditorExampleState extends State<MultiEditorExample> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          // Get content from all editors
-          final dartContent = await _leftController!.getValue();
-          final jsContent = await _rightController!.getValue();
-          final mdContent = await _bottomController!.getValue();
+      // PointerInterceptor stops the underlying Monaco iframes from stealing
+      // the click on Web so this FAB is reachable over the editors.
+      floatingActionButton: PointerInterceptor(
+        child: FloatingActionButton.extended(
+          onPressed: () async {
+            // Get content from all editors
+            final dartContent = await _leftController!.getValue();
+            final jsContent = await _rightController!.getValue();
+            final mdContent = await _bottomController!.getValue();
 
-          if (context.mounted) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('All Editor Contents'),
-                content: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Dart (${dartContent.length} chars)'),
-                      const SizedBox(height: 8),
-                      Text('JavaScript (${jsContent.length} chars)'),
-                      const SizedBox(height: 8),
-                      Text('Markdown (${mdContent.length} chars)'),
-                    ],
+            if (context.mounted) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('All Editor Contents'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Dart (${dartContent.length} chars)'),
+                        const SizedBox(height: 8),
+                        Text('JavaScript (${jsContent.length} chars)'),
+                        const SizedBox(height: 8),
+                        Text('Markdown (${mdContent.length} chars)'),
+                      ],
+                    ),
                   ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Close'),
+                    ),
+                  ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Close'),
-                  ),
-                ],
-              ),
-            );
-          }
-        },
-        label: const Text('Get All Content'),
-        icon: const Icon(Icons.download),
+              );
+            }
+          },
+          label: const Text('Get All Content'),
+          icon: const Icon(Icons.download),
+        ),
       ),
     );
   }

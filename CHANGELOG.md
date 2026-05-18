@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Android Flutter Web scroll gestures so scrolling focused Monaco content no longer opens the keyboard on release, while preserving intentional keyboard-open scrolling.
 - Fixed a Flutter Web first-load race by waiting for iframe attachment and retrying transient Monaco load failures.
 - Fixed the example iOS runner build configuration.
+- Wired `MonacoRouteObserver` + `MonacoFocusGuard` and added `pointer_interceptor` for FABs across the example app so popup menus, dialogs, and floating action buttons stay clickable over Monaco on the Web.
+
+### Docs
+- Expanded the README "Web: Handling Overlays" section to distinguish route overlays (handled by `MonacoFocusGuard`) from static overlays (handled by `PointerInterceptor`).
 
 ## [1.5.0] - 2026-05-16
 
