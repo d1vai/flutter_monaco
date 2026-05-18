@@ -715,7 +715,7 @@ class MonacoAssets {
                 // Typed helpers Flutter will call
                 const escapeRegExp = (value) =>
                   (value ?? '').replace(/$jsEscapePattern/g, '\\\\\$&');
-                const safe = (fn, fallback = null) => {
+                const safe = (fn, fallback = true) => {
                   try {
                     return fn();
                   } catch (e) {
@@ -771,37 +771,42 @@ class MonacoAssets {
                   getValue: () => safe(() => E().getValue(), ''),
                   setValue: (v) => safe(() => {
                     const ed = E();
-                    if (!ed) return null;
+                    if (!ed) return false;
                     ed.setValue(v || '');
-                    return null;
+                    return true;
                   }),
                   defineTheme: (name, data) => safe(() => {
-                    if (!window.monaco || !monaco.editor || !name) return null;
+                    if (!window.monaco || !monaco.editor || !name) return false;
                     monaco.editor.defineTheme(name, data || {});
-                    return null;
+                    return true;
                   }),
-                  setTheme: (theme) => safe(() => monaco.editor.setTheme(theme)),
+                  setTheme: (theme) => safe(() => {
+                    monaco.editor.setTheme(theme);
+                    return true;
+                  }),
                   setLanguage: (lang) => safe(() => {
                     const ed = E();
                     const model = ed?.getModel ? ed.getModel() : null;
-                    if (!model) return null;
+                    if (!model) return false;
                     monaco.editor.setModelLanguage(model, lang);
-                    return null;
+                    return true;
                   }),
                   updateOptions: (opts) => safe(() => {
                     const ed = E();
-                    if (!ed) return null;
+                    if (!ed) return false;
                     ed.updateOptions(opts);
-                    return null;
+                    return true;
                   }),
                   executeAction: (actionId, args) => safe(() => {
                     const ed = E();
-                    if (!ed) return null;
+                    if (!ed) return false;
                     const action = ed?.getAction ? ed.getAction(actionId) : null;
                     if (action && typeof action.run === 'function') {
-                      return action.run(args);
+                      action.run(args);
+                      return true;
                     }
-                    return ed.trigger('flutter-bridge', actionId, args);
+                    ed.trigger('flutter-bridge', actionId, args);
+                    return true;
                   }),
                   
                   // Selection
@@ -814,9 +819,9 @@ class MonacoAssets {
                   },
                   setSelection: (r) => safe(() => {
                     const ed = E();
-                    if (!ed) return null;
+                    if (!ed) return false;
                     ed.setSelection(r);
-                    return null;
+                    return true;
                   }),
                   
                   // Cursor
@@ -826,9 +831,9 @@ class MonacoAssets {
                   },
                   setCursorPosition: (line, column) => safe(() => {
                     const ed = E();
-                    if (!ed) return null;
+                    if (!ed) return false;
                     ed.setPosition({ lineNumber: line, column: column });
-                    return null;
+                    return true;
                   }),
                   
                   // Navigation
@@ -852,8 +857,9 @@ class MonacoAssets {
                   // Edits
                   applyEdits: (edits, opts) => safe(() => {
                     const model = E()?.getModel?.();
-                    if (!model) return null;
-                    return model.applyEdits(edits || [], opts || {});
+                    if (!model) return false;
+                    model.applyEdits(edits || [], opts || {});
+                    return true;
                   }),
 
                   // Decorations
@@ -871,9 +877,9 @@ class MonacoAssets {
                   // Markers (diagnostics)
                   setModelMarkers: (owner, markers) => safe(() => {
                     const model = E()?.getModel?.();
-                    if (!model) return null;
+                    if (!model) return false;
                     monaco.editor.setModelMarkers(model, owner || 'flutter', markers || []);
-                    return null;
+                    return true;
                   }),
 
                   // Find & replace (programmatic)
