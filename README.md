@@ -617,11 +617,11 @@ Common symptoms:
 - Dragging across a dropdown highlights text inside the editor instead of the menu items
 - FloatingActionButtons or other widgets stacked over the editor are unreactive
 
-There are two kinds of overlays, and they need different fixes.
+There are two kinds of overlays, and the package provides one primitive for each.
 
 #### 1. Route overlays (dialogs, popup menus, dropdowns)
 
-Anything pushed as a `ModalRoute` - `showDialog`, `showMenu`, `PopupMenuButton`, `DropdownButton`, `BottomSheet`. Provide a `MonacoRouteObserver` and place a `MonacoFocusGuard` near each editor. The guard listens for route pushes and disables iframe interaction automatically while the overlay is on top.
+Anything pushed as a `ModalRoute` - `showDialog`, `showMenu`, `PopupMenuButton`, `DropdownButton`, modal bottom sheets. Provide a `MonacoRouteObserver` and place a `MonacoFocusGuard` near each editor. The guard listens for route pushes and disables iframe interaction automatically while the overlay is on top.
 
 ```dart
 final MonacoRouteObserver monacoRouteObserver = MonacoRouteObserver();
@@ -640,34 +640,65 @@ MonacoFocusGuard(
 )
 ```
 
-#### 2. Static overlays (FABs, in-tree stacked widgets)
+#### 2. Static overlays (FABs, drawers, in-tree stacked widgets)
 
-Persistent widgets that share the page with the editor - a `floatingActionButton` row, anything inside a `Stack` over the editor - do not push a route, so the focus guard cannot fire for them. Wrap the overlapping subtree with `PointerInterceptor` from [`package:pointer_interceptor`](https://pub.dev/packages/pointer_interceptor). It inserts an invisible DOM element above the iframe at that widget's location so the browser sends the click to Flutter.
+Persistent widgets that share the page with the editor - a `floatingActionButton`, a `Drawer`, a persistent footer, anything inside a `Stack` over the editor - do not push a route, so the focus guard cannot fire for them. The package provides two complementary tools:
 
-```yaml
-dependencies:
-  pointer_interceptor: ^0.10.1
-```
+**`MonacoScaffold`** - drop-in replacement for `Scaffold` that automatically protects the standard overlay slots (`floatingActionButton`, `drawer`, `endDrawer`, `bottomSheet`, `bottomNavigationBar`, `persistentFooterButtons`):
 
 ```dart
-import 'package:pointer_interceptor/pointer_interceptor.dart';
-
-Scaffold(
+MonacoScaffold(
+  appBar: AppBar(...),
   body: MonacoEditor(controller: controller),
-  floatingActionButton: PointerInterceptor(
-    child: FloatingActionButton(
-      onPressed: doSomething,
-      child: const Icon(Icons.add),
-    ),
+  floatingActionButton: FloatingActionButton(
+    onPressed: doSomething,
+    child: const Icon(Icons.add),
   ),
 )
 ```
 
-`PointerInterceptor` is a no-op on non-web platforms, so it is safe to use in shared widget trees.
+**`MonacoOverlayBoundary`** - the underlying primitive. Wrap any custom overlay subtree (e.g. a `Stack` child positioned over the editor):
+
+```dart
+Stack(
+  children: [
+    MonacoEditor(controller: controller),
+    Positioned(
+      right: 24,
+      bottom: 24,
+      child: MonacoOverlayBoundary(
+        child: MyFloatingPalette(),
+      ),
+    ),
+  ],
+)
+```
+
+On web, the boundary creates a transparent DOM `<div>` over the widget's global bounds with maximum z-index, and disables pointer events on any intersecting Monaco iframe while the user is hovering or pressing the overlay. On native platforms it is a pass-through.
+
+Tip: for `floatingActionButton: Row(...)`, set `mainAxisSize: MainAxisSize.min` so the shield only covers the actual buttons rather than the full Scaffold width.
+
+#### Transient overlays (snackbars, toasts, imperative Overlay entries)
+
+For overlays that are neither routes nor static enough for a `MonacoOverlayBoundary` - a `ScaffoldMessenger` snackbar with an action button, a temporary toast, an `Overlay.insert` entry shown for a known duration - use `controller.runWithInteractionDisabled` to scope the interaction toggle to the lifetime of the overlay:
+
+```dart
+await controller.runWithInteractionDisabled(() async {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: const Text('Saved'),
+      action: SnackBarAction(label: 'Undo', onPressed: undo),
+    ),
+  );
+  await Future<void>.delayed(const Duration(seconds: 4));
+});
+```
+
+The previous interaction state is restored in a `finally` block. On native platforms this is a thin pass-through (no behavior change).
 
 #### Manual override
 
-If you cannot use a `RouteObserver` in your app, toggle the editor manually:
+If you cannot use route observers, overlay boundaries, or the convenience helper, toggle the editor manually:
 
 ```dart
 MonacoEditor(

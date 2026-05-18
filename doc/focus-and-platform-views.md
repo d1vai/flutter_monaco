@@ -94,8 +94,8 @@ If you need finer control, these hooks make focus rock‑solid:
 
 4) Avoid intercepting clicks above the WebView
 
-- If you render overlays on top, use `HitTestBehavior.translucent` or `pointer_interceptor` so the platform view can
-  still get the primary click.
+- If you render overlays on top, use `HitTestBehavior.translucent` so the platform view can still get the primary click.
+- On Flutter Web specifically, the iframe-backed platform view will swallow pointer events for any Flutter widget visually above it. Use `MonacoFocusGuard` + `MonacoRouteObserver` for dialog/menu routes, `MonacoScaffold` or `MonacoOverlayBoundary` for static overlays (FABs, drawers, persistent bars), and `MonacoController.runWithInteractionDisabled` for transient overlays (snackbars, toasts). See the README's "Web: Handling Overlays" section.
 
 ## Reference Implementation Snippets
 

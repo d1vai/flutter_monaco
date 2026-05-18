@@ -311,6 +311,51 @@ class MonacoController {
     await _webViewController.setInteractionEnabled(enabled);
   }
 
+  /// Runs [action] with editor interaction temporarily disabled, restoring the
+  /// previous state in a `finally` block.
+  ///
+  /// Useful for transient Flutter overlays that are NOT pushed as routes (so
+  /// [`MonacoFocusGuard`] cannot detect them) and that are NOT static enough
+  /// to wrap in a [`MonacoOverlayBoundary`] - typically `ScaffoldMessenger`
+  /// snackbars with action buttons, toasts, or imperative `Overlay.insert`
+  /// entries shown for a known duration.
+  ///
+  /// On native platforms `setInteractionEnabled` is a no-op, so this is a
+  /// thin wrapper around the [action] there.
+  ///
+  /// Example:
+  /// ```dart
+  /// await controller.runWithInteractionDisabled(() async {
+  ///   ScaffoldMessenger.of(context).showSnackBar(
+  ///     SnackBar(
+  ///       content: const Text('Saved'),
+  ///       action: SnackBarAction(label: 'Undo', onPressed: undo),
+  ///     ),
+  ///   );
+  ///   await Future<void>.delayed(const Duration(seconds: 4));
+  /// });
+  /// ```
+  Future<T> runWithInteractionDisabled<T>(
+    FutureOr<T> Function() action,
+  ) async {
+    if (_disposed) {
+      return await Future<T>.value(action());
+    }
+
+    final wasEnabled = _interactionEnabled;
+    if (wasEnabled) {
+      await setInteractionEnabled(false);
+    }
+
+    try {
+      return await Future<T>.value(action());
+    } finally {
+      if (wasEnabled && !_disposed) {
+        await setInteractionEnabled(true);
+      }
+    }
+  }
+
   /// Updates the editor configuration options.
   ///
   /// Only the fields present in [options] will be updated; others remain unchanged.

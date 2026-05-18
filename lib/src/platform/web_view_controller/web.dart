@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_monaco/src/core/monaco_assets.dart';
 import 'package:flutter_monaco/src/platform/platform_webview.dart';
+import 'package:flutter_monaco/src/platform/web_interaction_coordinator.dart';
 import 'package:web/web.dart' as web;
 
 /// WebView implementation for Flutter Web using an iframe.
@@ -78,6 +79,11 @@ class WebViewController implements PlatformWebViewController {
       ..style.height = '100%'
       ..style.border = 'none'
       ..allow = 'clipboard-read; clipboard-write';
+
+    MonacoWebInteractionCoordinator.instance.registerEditor(
+      _viewId!,
+      _iframe!,
+    );
     _applyInteractionEnabled();
 
     // Register the view factory.
@@ -197,7 +203,15 @@ class WebViewController implements PlatformWebViewController {
   void _applyInteractionEnabled() {
     final iframe = _iframe;
     if (iframe == null) return;
-    iframe.style.pointerEvents = _interactionEnabled ? 'auto' : 'none';
+    final viewId = _viewId;
+    if (viewId == null) {
+      iframe.style.pointerEvents = _interactionEnabled ? 'auto' : 'none';
+      return;
+    }
+    MonacoWebInteractionCoordinator.instance.setBaseEnabled(
+      viewId,
+      _interactionEnabled,
+    );
   }
 
   @override
@@ -342,6 +356,10 @@ class WebViewController implements PlatformWebViewController {
     _disposed = true;
 
     debugPrint('[WebViewController] Disposing...');
+    final viewId = _viewId;
+    if (viewId != null) {
+      MonacoWebInteractionCoordinator.instance.unregisterEditor(viewId);
+    }
     if (_messageHandler != null) {
       web.window.removeEventListener('message', _messageHandler!);
       _messageHandler = null;
