@@ -105,17 +105,20 @@ class MonacoAssets {
         final loader = File(p.join(targetDir, 'min', 'vs', 'loader.js'));
         final sentinel = File(p.join(targetDir, '.monaco_complete'));
 
-        final ok = loader.existsSync() &&
+        final ok =
+            loader.existsSync() &&
             sentinel.existsSync() &&
             (await sentinel.readAsString()).trim() == monacoVersion;
 
         if (!ok) {
           debugPrint(
-              '[MonacoAssets] Monaco not found or incomplete, copying assets...');
+            '[MonacoAssets] Monaco not found or incomplete, copying assets...',
+          );
           await _copyAllAssets(targetDir);
         } else {
           debugPrint(
-              '[MonacoAssets] Monaco already extracted at: $targetDir (version $monacoVersion)');
+            '[MonacoAssets] Monaco already extracted at: $targetDir (version $monacoVersion)',
+          );
         }
 
         completer.complete();
@@ -212,11 +215,7 @@ class MonacoAssets {
     final directory = Directory(targetDir);
 
     if (!directory.existsSync()) {
-      return {
-        'exists': false,
-        'path': targetDir,
-        'version': monacoVersion,
-      };
+      return {'exists': false, 'path': targetDir, 'version': monacoVersion};
     }
 
     // Count files and calculate size
@@ -324,11 +323,13 @@ class MonacoAssets {
     final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
     final monacoAssets = manifest
         .listAssets()
-        .where((key) => key.startsWith(
-            '$assetBaseDir/')) // Trailing slash prevents matching similar prefixes
+        .where(
+          (key) => key.startsWith('$assetBaseDir/'),
+        ) // Trailing slash prevents matching similar prefixes
         .where((key) => !key.endsWith('.DS_Store')) // Skip macOS metadata files
-        .where((key) => !key
-            .endsWith('/$_htmlFileName')) // Exclude index.html from copy list
+        .where(
+          (key) => !key.endsWith('/$_htmlFileName'),
+        ) // Exclude index.html from copy list
         .toList();
 
     debugPrint(
@@ -383,7 +384,8 @@ class MonacoAssets {
     final sentinelFile = File(p.join(targetDir, '.monaco_complete'));
     await sentinelFile.writeAsString(monacoVersion);
     debugPrint(
-        '[MonacoAssets] Sentinel file written for version $monacoVersion');
+      '[MonacoAssets] Sentinel file written for version $monacoVersion',
+    );
   }
 
   /// Generates the HTML document that hosts the Monaco Editor.
@@ -445,7 +447,8 @@ class MonacoAssets {
     String platformScript = '';
 
     if (isWeb) {
-      platformScript = '''
+      platformScript =
+          '''
 <script>
   console.log('[Web Init] Setting up for iframe mode');
   self.MonacoEnvironment = {
@@ -503,7 +506,8 @@ class MonacoAssets {
 ''';
     } else if (isIosOrMacOS) {
       // iOS and macOS need blob worker shim for WKWebView + file:// protocol
-      platformScript = '''
+      platformScript =
+          '''
 <script>
   (function () {
     console.log('[Init] Setting up worker shim for WKWebView');
@@ -535,7 +539,8 @@ class MonacoAssets {
     } else {
       // Linux and other platforms: just set baseUrl
       final baseUrl = vsPath.replaceAll('/vs', '/');
-      platformScript = '''
+      platformScript =
+          '''
 <script>
   // Linux/Other: Set base URL for worker resolution
   console.log('[Init] Setting Monaco base URL');
@@ -761,6 +766,7 @@ class MonacoAssets {
                   },
                   getValue: () => E().getValue(),
                   setValue: (v) => E().setValue(v || ''),
+                  defineTheme: (name, data) => monaco.editor.defineTheme(name, data || {}),
                   setTheme: (theme) => monaco.editor.setTheme(theme),
                   setLanguage: (lang) => monaco.editor.setModelLanguage(E().getModel(), lang),
                   updateOptions: (opts) => E().updateOptions(opts),

@@ -11,9 +11,8 @@ import 'package:flutter_monaco/src/platform/platform_webview.dart';
 /// A callback function that provides completion items for a given
 /// [CompletionRequest]. It should return a [Future] that resolves to a
 /// [CompletionList].
-typedef CompletionProvider = Future<CompletionList> Function(
-  CompletionRequest request,
-);
+typedef CompletionProvider =
+    Future<CompletionList> Function(CompletionRequest request);
 
 /// Manages the lifecycle and interaction with a Monaco Editor instance.
 ///
@@ -129,7 +128,8 @@ class MonacoController {
             allowCdnFonts: allowCdnFonts,
           );
           debugPrint(
-              '[MonacoController] Loading HTML (Platform: ${kIsWeb ? 'Web' : defaultTargetPlatform.name})');
+            '[MonacoController] Loading HTML (Platform: ${kIsWeb ? 'Web' : defaultTargetPlatform.name})',
+          );
 
           // Wait for editor ready signal with configurable timeout
           await bridge.onReady.future.timeout(
@@ -276,16 +276,34 @@ class MonacoController {
   Future<void> setJsonDiagnostics(JsonDiagnosticsOptions diagnostics) async {
     await _ensureReady();
     await _webViewController.runJavaScript(
-        'flutterMonaco.setJsonDiagnosticsOptions(${jsonEncode(diagnostics.toJson())})');
+      'flutterMonaco.setJsonDiagnosticsOptions(${jsonEncode(diagnostics.toJson())})',
+    );
   }
 
   /// Changes the editor's color theme.
   ///
   /// Waits for the editor to be ready before applying.
   Future<void> setTheme(MonacoTheme theme) async {
+    await setThemeById(theme.id);
+  }
+
+  /// Changes the editor's color theme using a raw Monaco theme identifier.
+  ///
+  /// This also supports custom themes registered with [defineTheme].
+  Future<void> setThemeById(String themeId) async {
     await _ensureReady();
     await _webViewController.runJavaScript(
-      'flutterMonaco.setTheme(${jsonEncode(theme.id)})',
+      'flutterMonaco.setTheme(${jsonEncode(themeId)})',
+    );
+  }
+
+  /// Registers or replaces a Monaco theme definition.
+  ///
+  /// [data] should follow Monaco's `IStandaloneThemeData` shape.
+  Future<void> defineTheme(String name, Map<String, dynamic> data) async {
+    await _ensureReady();
+    await _webViewController.runJavaScript(
+      'flutterMonaco.defineTheme(${jsonEncode(name)}, ${jsonEncode(data)})',
     );
   }
 
@@ -335,9 +353,7 @@ class MonacoController {
   ///   await Future<void>.delayed(const Duration(seconds: 4));
   /// });
   /// ```
-  Future<T> runWithInteractionDisabled<T>(
-    FutureOr<T> Function() action,
-  ) async {
+  Future<T> runWithInteractionDisabled<T>(FutureOr<T> Function() action) async {
     if (_disposed) {
       return await Future<T>.value(action());
     }
@@ -387,7 +403,8 @@ class MonacoController {
       throw ArgumentError.value(id, 'id', 'Completion source already exists');
     }
 
-    final providerId = id ??
+    final providerId =
+        id ??
         'flutter_${DateTime.now().millisecondsSinceEpoch}_${_completionSources.length}';
     final entry = _RegisteredCompletion(
       id: providerId,
@@ -408,7 +425,8 @@ class MonacoController {
   }
 
   Future<void> _registerCompletionSourceInternal(
-      _RegisteredCompletion entry) async {
+    _RegisteredCompletion entry,
+  ) async {
     final payload = jsonEncode({
       'id': entry.id,
       'languages': entry.languages,
@@ -416,8 +434,9 @@ class MonacoController {
     });
 
     try {
-      await _webViewController
-          .runJavaScript('flutterMonaco.registerCompletionSource($payload)');
+      await _webViewController.runJavaScript(
+        'flutterMonaco.registerCompletionSource($payload)',
+      );
     } catch (e) {
       _completionSources.remove(entry.id);
       rethrow;
@@ -478,20 +497,23 @@ class MonacoController {
     await _ensureReady();
     // Use robust in-page helper (waits for visibility, layouts, focuses textarea)
     await _webViewController.runJavaScript(
-        'window.flutterMonaco && window.flutterMonaco.forceFocus && window.flutterMonaco.forceFocus()');
+      'window.flutterMonaco && window.flutterMonaco.forceFocus && window.flutterMonaco.forceFocus()',
+    );
   }
 
   /// Attempts to focus the editor multiple times to handle race conditions during layout transitions.
   ///
   /// [attempts] defaults to 3, with [interval] of 24ms.
-  Future<void> ensureEditorFocus(
-      {int attempts = 3,
-      Duration interval = const Duration(milliseconds: 24)}) async {
+  Future<void> ensureEditorFocus({
+    int attempts = 3,
+    Duration interval = const Duration(milliseconds: 24),
+  }) async {
     if (!_interactionEnabled) return;
     await _ensureReady();
 
     // On mobile, multiple async focus() calls interrupt the IME lifecycle.
-    final isMobileNative = !kIsWeb &&
+    final isMobileNative =
+        !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS);
     final effectiveAttempts = isMobileNative ? 1 : attempts;
@@ -499,7 +521,8 @@ class MonacoController {
     for (var i = 0; i < effectiveAttempts; i++) {
       try {
         await _webViewController.runJavaScript(
-            'window.flutterMonaco && window.flutterMonaco.forceFocus && window.flutterMonaco.forceFocus()');
+          'window.flutterMonaco && window.flutterMonaco.forceFocus && window.flutterMonaco.forceFocus()',
+        );
       } catch (_) {}
       if (i + 1 < effectiveAttempts) {
         await Future<void>.delayed(interval);
@@ -513,7 +536,8 @@ class MonacoController {
   Future<void> layout() async {
     await _ensureReady();
     await _webViewController.runJavaScript(
-        'window.flutterMonaco && window.flutterMonaco.layout && window.flutterMonaco.layout()');
+      'window.flutterMonaco && window.flutterMonaco.layout && window.flutterMonaco.layout()',
+    );
   }
 
   /// Scrolls the editor to the very top (line 1, column 1).
@@ -576,23 +600,33 @@ class MonacoController {
   void _wireEvents() {
     _bridge.addRawListener((Map<String, dynamic> json) {
       // Use safer conversion methods with fallbacks
-      final event = json.tryGetString('event',
-          alternativeKeys: ['eventType', 'type'], defaultValue: 'unknown');
+      final event = json.tryGetString(
+        'event',
+        alternativeKeys: ['eventType', 'type'],
+        defaultValue: 'unknown',
+      );
 
       switch (event) {
         case 'contentChanged':
           // Use tryGetBool with default value
-          _onContentChanged.add(json.tryGetBool('isFlush',
+          _onContentChanged.add(
+            json.tryGetBool(
+                  'isFlush',
                   alternativeKeys: ['flush', 'fullChange'],
-                  defaultValue: false) ??
-              false);
+                  defaultValue: false,
+                ) ??
+                false,
+          );
           break;
         case 'selectionChanged':
           // Use factory constructor for cleaner conversion
-          final selectionMap = json.tryGetMap<String, dynamic>('selection',
-              alternativeKeys: ['sel', 'range']);
-          final selection =
-              selectionMap != null ? Range.fromJson(selectionMap) : null;
+          final selectionMap = json.tryGetMap<String, dynamic>(
+            'selection',
+            alternativeKeys: ['sel', 'range'],
+          );
+          final selection = selectionMap != null
+              ? Range.fromJson(selectionMap)
+              : null;
           _onSelectionChanged.add(selection);
           break;
         case 'focus':
@@ -619,9 +653,7 @@ class MonacoController {
           await _ensureReady();
           final request = CompletionRequest.fromJson(json);
           final registered = _completionSources[request.providerId];
-          const emptySuggestions = {
-            'suggestions': <Map<String, dynamic>>[],
-          };
+          const emptySuggestions = {'suggestions': <Map<String, dynamic>>[]};
 
           Future<void> respond(Map<String, dynamic> payload) {
             return _webViewController.runJavaScript(
@@ -638,9 +670,7 @@ class MonacoController {
             final result = await registered.provider(request);
             await respond(result.toJson());
           } catch (e) {
-            debugPrint(
-              '[MonacoController] completion provider failed: $e',
-            );
+            debugPrint('[MonacoController] completion provider failed: $e');
             await respond(emptySuggestions);
           }
         } catch (e) {
@@ -662,7 +692,8 @@ class MonacoController {
 
       // Windows WebView2 might auto-decode JSON, handle both cases
       // Only decode if jsonAware is true (for API calls that return JSON)
-      final result = (jsonAware &&
+      final result =
+          (jsonAware &&
               raw is String &&
               (raw.startsWith('{') || raw.startsWith('[')))
           ? (raw.tryDecode() ?? raw)
@@ -834,8 +865,11 @@ class MonacoController {
   }
 
   /// Reveal multiple lines in the editor
-  Future<void> revealLines(int startLine, int endLine,
-      {bool center = false}) async {
+  Future<void> revealLines(
+    int startLine,
+    int endLine, {
+    bool center = false,
+  }) async {
     final range = Range.lines(startLine, endLine);
     await revealRange(range, center: center);
   }
@@ -885,7 +919,8 @@ class MonacoController {
         results.add(lineDefaultValue);
         continue;
       }
-      final content = await _executeJavaScript<String>(
+      final content =
+          await _executeJavaScript<String>(
             'flutterMonaco.getLineContent($line)',
             defaultValue: lineDefaultValue,
             jsonAware: false,
@@ -964,11 +999,13 @@ class MonacoController {
     String? hoverMessage,
   }) async {
     final decorations = ranges
-        .map((range) => DecorationOptions.inlineClass(
-              range: range,
-              className: className,
-              hoverMessage: hoverMessage,
-            ))
+        .map(
+          (range) => DecorationOptions.inlineClass(
+            range: range,
+            className: className,
+            hoverMessage: hoverMessage,
+          ),
+        )
         .toList();
 
     return setDecorations(decorations);
@@ -981,11 +1018,13 @@ class MonacoController {
     bool isWholeLine = true,
   }) async {
     final decorations = lines
-        .map((line) => DecorationOptions.line(
-              range: Range.singleLine(line),
-              className: className,
-              isWholeLine: isWholeLine,
-            ))
+        .map(
+          (line) => DecorationOptions.line(
+            range: Range.singleLine(line),
+            className: className,
+            isWholeLine: isWholeLine,
+          ),
+        )
         .toList();
 
     return setDecorations(decorations);
@@ -1105,7 +1144,8 @@ class MonacoController {
     Uri? uri,
     Uri? defaultUri,
   }) async {
-    final script = '''
+    final script =
+        '''
       flutterMonaco.createModel(
         ${jsonEncode(value)}, 
         ${jsonEncode(language)}, 
@@ -1123,9 +1163,7 @@ class MonacoController {
     if (defaultUri != null) {
       return defaultUri;
     }
-    throw StateError(
-      'flutterMonaco.createModel returned invalid uri: $result',
-    );
+    throw StateError('flutterMonaco.createModel returned invalid uri: $result');
   }
 
   /// Set the active model
@@ -1332,10 +1370,7 @@ class MonacoController {
   ///   'monaco.editor.getEditors().length',
   /// );
   /// ```
-  Future<T?> evaluateJavaScript<T>(
-    String expression, {
-    T? defaultValue,
-  }) async {
+  Future<T?> evaluateJavaScript<T>(String expression, {T? defaultValue}) async {
     await _ensureReady();
 
     final wrapped = _wrapJavaScriptEvaluationExpression(expression);
