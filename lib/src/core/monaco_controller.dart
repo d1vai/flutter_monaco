@@ -307,6 +307,17 @@ class MonacoController {
     );
   }
 
+  /// Best-effort custom theme registration that degrades cleanly on native WebViews.
+  Future<bool> tryDefineTheme(String name, Map<String, dynamic> data) async {
+    try {
+      await defineTheme(name, data);
+      return true;
+    } catch (e) {
+      debugPrint('[MonacoController] defineTheme failed for "$name": $e');
+      return false;
+    }
+  }
+
   /// Sets the background color of the WebView container.
   ///
   /// Applied immediately to the native view, even if Monaco is still loading.

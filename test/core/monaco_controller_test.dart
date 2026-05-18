@@ -143,6 +143,20 @@ void main() {
         expect(joined.contains('editor.action.indentLines'), true);
         expect(joined.contains('editor.action.outdentLines'), true);
       });
+
+      test('tryDefineTheme returns false when js execution fails', () async {
+        final bundle = await _createBundle();
+        bundle.webview.throwOnContains('defineTheme');
+
+        final ok = await bundle.controller.tryDefineTheme('broken', {
+          'base': 'vs',
+          'inherit': true,
+          'rules': const [],
+          'colors': const <String, String>{},
+        });
+
+        expect(ok, false);
+      });
     });
 
     group('interaction', () {
