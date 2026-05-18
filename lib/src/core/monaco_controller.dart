@@ -251,6 +251,7 @@ class MonacoController {
   Future<void> setLanguage(MonacoLanguage language) async {
     if (!_onReady.isCompleted) {
       _queuedLanguage = language;
+      if (kIsWeb) return;
       await _ensureReady();
       if (_queuedLanguage == language) {
         // Only use queued value if it hasn't been overwritten
@@ -308,6 +309,51 @@ class MonacoController {
     if (_disposed) return;
     _interactionEnabled = enabled;
     await _webViewController.setInteractionEnabled(enabled);
+  }
+
+  /// Runs [action] with editor interaction temporarily disabled, restoring the
+  /// previous state in a `finally` block.
+  ///
+  /// Useful for transient Flutter overlays that are NOT pushed as routes (so
+  /// [`MonacoFocusGuard`] cannot detect them) and that are NOT static enough
+  /// to wrap in a [`MonacoOverlayBoundary`] - typically `ScaffoldMessenger`
+  /// snackbars with action buttons, toasts, or imperative `Overlay.insert`
+  /// entries shown for a known duration.
+  ///
+  /// On native platforms `setInteractionEnabled` is a no-op, so this is a
+  /// thin wrapper around the [action] there.
+  ///
+  /// Example:
+  /// ```dart
+  /// await controller.runWithInteractionDisabled(() async {
+  ///   ScaffoldMessenger.of(context).showSnackBar(
+  ///     SnackBar(
+  ///       content: const Text('Saved'),
+  ///       action: SnackBarAction(label: 'Undo', onPressed: undo),
+  ///     ),
+  ///   );
+  ///   await Future<void>.delayed(const Duration(seconds: 4));
+  /// });
+  /// ```
+  Future<T> runWithInteractionDisabled<T>(
+    FutureOr<T> Function() action,
+  ) async {
+    if (_disposed) {
+      return await Future<T>.value(action());
+    }
+
+    final wasEnabled = _interactionEnabled;
+    if (wasEnabled) {
+      await setInteractionEnabled(false);
+    }
+
+    try {
+      return await Future<T>.value(action());
+    } finally {
+      if (wasEnabled && !_disposed) {
+        await setInteractionEnabled(true);
+      }
+    }
   }
 
   /// Updates the editor configuration options.
@@ -425,6 +471,8 @@ class MonacoController {
   /// Requests focus for the editor widget.
   ///
   /// Uses a robust method that waits for visibility and layout before attempting focus.
+  /// On Android and iOS, the OS soft keyboard may only appear after a user tap
+  /// inside the editor.
   Future<void> focus() async {
     if (!_interactionEnabled) return;
     await _ensureReady();
@@ -441,12 +489,19 @@ class MonacoController {
       Duration interval = const Duration(milliseconds: 24)}) async {
     if (!_interactionEnabled) return;
     await _ensureReady();
-    for (var i = 0; i < attempts; i++) {
+
+    // On mobile, multiple async focus() calls interrupt the IME lifecycle.
+    final isMobileNative = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    final effectiveAttempts = isMobileNative ? 1 : attempts;
+
+    for (var i = 0; i < effectiveAttempts; i++) {
       try {
         await _webViewController.runJavaScript(
             'window.flutterMonaco && window.flutterMonaco.forceFocus && window.flutterMonaco.forceFocus()');
       } catch (_) {}
-      if (i + 1 < attempts) {
+      if (i + 1 < effectiveAttempts) {
         await Future<void>.delayed(interval);
       }
     }
@@ -723,6 +778,7 @@ class MonacoController {
   Future<void> setValue(String value) async {
     if (!_onReady.isCompleted) {
       _queuedValue = value;
+      if (kIsWeb) return;
       await _ensureReady();
       if (_queuedValue == value) {
         // Only use queued value if it hasn't been overwritten

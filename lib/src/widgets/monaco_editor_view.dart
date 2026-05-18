@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_monaco/flutter_monaco.dart';
@@ -338,12 +339,12 @@ class _MonacoEditorState extends State<MonacoEditor> {
           return;
         }
       }
-      if (widget.autofocus && widget.interactionEnabled) {
-        // Defer to next frame to ensure visibility, request Flutter focus, and then enforce Monaco focus
+      if (widget.autofocus &&
+          widget.interactionEnabled &&
+          !_isMobileInputPlatform()) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!_isBootstrapCurrent(bootstrapToken)) return;
           _webFocusNode.requestFocus();
-          // Retry a few times to survive competing focus layout
           unawaited(_controller!.ensureEditorFocus(attempts: 3));
         });
       }
@@ -366,6 +367,11 @@ class _MonacoEditorState extends State<MonacoEditor> {
   }
 
   bool _isBootstrapCurrent(int token) => mounted && token == _bootstrapSeq;
+
+  bool _isMobileInputPlatform() {
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
 
   /// Subscribes to all relevant event streams from the controller.
   void _wireListeners() {
@@ -488,30 +494,40 @@ class _MonacoEditorState extends State<MonacoEditor> {
       return widget.loadingBuilder?.call(context) ?? const _DefaultLoading();
     }
 
-    final webView = SizedBox.expand(
-      child: Focus(
-        focusNode: _webFocusNode,
-        canRequestFocus: widget.interactionEnabled,
-        autofocus: widget.autofocus && widget.interactionEnabled,
-        onKeyEvent: (node, event) {
-          if (event is KeyDownEvent) {
-            return KeyEventResult.skipRemainingHandlers;
-          }
-          return KeyEventResult.ignored;
-        },
-        child: Listener(
-          behavior: HitTestBehavior.translucent,
-          onPointerDown: (_) {
-            if (!widget.interactionEnabled) return;
-            if (!_webFocusNode.hasFocus) {
-              _webFocusNode.requestFocus();
+    // On mobile, let the WebView own the full tap-to-keyboard chain.
+    // Flutter's Focus/Listener wrapper steals the gesture context, which
+    // causes the OS to refuse the soft keyboard.
+    final isMobileInputPlatform = _isMobileInputPlatform();
+
+    final Widget webView;
+    if (isMobileInputPlatform) {
+      webView = SizedBox.expand(child: _controller!.webViewWidget);
+    } else {
+      webView = SizedBox.expand(
+        child: Focus(
+          focusNode: _webFocusNode,
+          canRequestFocus: widget.interactionEnabled,
+          autofocus: widget.autofocus && widget.interactionEnabled,
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent) {
+              return KeyEventResult.skipRemainingHandlers;
             }
-            unawaited(_controller!.ensureEditorFocus(attempts: 1));
+            return KeyEventResult.ignored;
           },
-          child: _controller!.webViewWidget,
+          child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) {
+              if (!widget.interactionEnabled) return;
+              if (!_webFocusNode.hasFocus) {
+                _webFocusNode.requestFocus();
+              }
+              unawaited(_controller!.ensureEditorFocus(attempts: 1));
+            },
+            child: _controller!.webViewWidget,
+          ),
         ),
-      ),
-    );
+      );
+    }
 
     Widget content = webView;
     if (_connectionState == _ConnectionState.connecting) {

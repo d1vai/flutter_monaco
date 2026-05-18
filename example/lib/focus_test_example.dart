@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_monaco/flutter_monaco.dart';
 
+import 'monaco_observer.dart';
+
 class FocusTestExample extends StatefulWidget {
   const FocusTestExample({super.key});
 
@@ -41,38 +43,50 @@ class _FocusTestExampleState extends State<FocusTestExample> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return MonacoScaffold(
       appBar: AppBar(
         title: const Text('Focus Test'),
         backgroundColor: Colors.purple,
       ),
-      body: Row(
+      body: Column(
         children: [
-          // Left: Monaco Editor
+          // Keep the dialog clickable over the editor on Web.
+          if (_controller != null)
+            MonacoFocusGuard(
+              controller: _controller!,
+              modalRouteObserver: monacoRouteObserver,
+            ),
           Expanded(
-            child: _controller?.webViewWidget ??
-                const Center(child: CircularProgressIndicator()),
-          ),
-          const VerticalDivider(width: 1),
-          // Right: Flutter TextField
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                controller: _textController,
-                maxLines: null,
-                expands: true,
-                style: const TextStyle(fontFamily: 'monospace'),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Type here...',
+            child: Row(
+              children: [
+                // Left: Monaco Editor
+                Expanded(
+                  child: _controller?.webViewWidget ??
+                      const Center(child: CircularProgressIndicator()),
                 ),
-              ),
+                const VerticalDivider(width: 1),
+                // Right: Flutter TextField
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: TextField(
+                      controller: _textController,
+                      maxLines: null,
+                      expands: true,
+                      style: const TextStyle(fontFamily: 'monospace'),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Type here...',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
-      // Dialog button at bottom
+      // MonacoScaffold wraps this in a MonacoOverlayBoundary on Web.
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           showDialog(

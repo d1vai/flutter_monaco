@@ -3,6 +3,7 @@ import 'package:flutter_monaco/flutter_monaco.dart';
 
 import 'custom_font_example.dart';
 import 'focus_test_example.dart';
+import 'monaco_observer.dart';
 import 'multi_editor_example.dart';
 
 void main() {
@@ -20,6 +21,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
+      navigatorObservers: [monacoRouteObserver],
       home: const MonacoExamplePage(),
     );
   }
@@ -178,7 +180,7 @@ class _MonacoExamplePageState extends State<MonacoExamplePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return MonacoScaffold(
       appBar: AppBar(
         title: const Text('Flutter Monaco Editor'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -255,6 +257,12 @@ class _MonacoExamplePageState extends State<MonacoExamplePage> {
               ],
             ),
           ),
+          // Keep Flutter dialogs/menus clickable over the editor on Web.
+          if (_controller != null)
+            MonacoFocusGuard(
+              controller: _controller!,
+              modalRouteObserver: monacoRouteObserver,
+            ),
           // Editor
           Expanded(
             child: _isLoading
@@ -272,7 +280,12 @@ class _MonacoExamplePageState extends State<MonacoExamplePage> {
           ),
         ],
       ),
+      // MonacoScaffold automatically wraps this Row in a MonacoOverlayBoundary
+      // so the underlying Monaco iframe cannot swallow clicks on Web.
+      // mainAxisSize: MainAxisSize.min keeps the shield sized to the actual
+      // buttons rather than the full available width.
       floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           // Focus test button

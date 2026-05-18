@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_monaco/flutter_monaco.dart';
 
+import 'monaco_observer.dart';
+
 class MultiEditorExample extends StatefulWidget {
   const MultiEditorExample({super.key});
 
@@ -115,7 +117,7 @@ class _MultiEditorExampleState extends State<MultiEditorExample> {
       );
     }
 
-    return Scaffold(
+    return MonacoScaffold(
       appBar: AppBar(
         title: const Text('Multi-Editor Example'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -162,6 +164,19 @@ class _MultiEditorExampleState extends State<MultiEditorExample> {
       ),
       body: Column(
         children: [
+          // Keep Flutter dialogs/menus clickable over each editor on Web.
+          MonacoFocusGuard(
+            controller: _leftController!,
+            modalRouteObserver: monacoRouteObserver,
+          ),
+          MonacoFocusGuard(
+            controller: _rightController!,
+            modalRouteObserver: monacoRouteObserver,
+          ),
+          MonacoFocusGuard(
+            controller: _bottomController!,
+            modalRouteObserver: monacoRouteObserver,
+          ),
           // Top section - Split view
           Expanded(
             flex: 2,
@@ -220,6 +235,8 @@ class _MultiEditorExampleState extends State<MultiEditorExample> {
           ),
         ],
       ),
+      // MonacoScaffold wraps this in a MonacoOverlayBoundary on Web so the
+      // underlying Monaco iframes do not swallow the click.
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           // Get content from all editors

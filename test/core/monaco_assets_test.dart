@@ -74,5 +74,110 @@ void main() {
       final infoAfter = await MonacoAssets.assetInfo();
       expect(infoAfter['exists'], false);
     });
+
+    test('generated html includes mobile viewport metadata', () {
+      final html = MonacoAssets.generateIndexHtml('min/vs');
+
+      expect(html, contains('name="viewport"'));
+      expect(
+        html,
+        contains(
+          'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no',
+        ),
+      );
+    });
+
+    test('generated html does not override Monaco inputarea layout', () {
+      final html = MonacoAssets.generateIndexHtml('min/vs');
+
+      expect(html, isNot(contains('.monaco-editor .inputarea')));
+      expect(html, isNot(contains('@media (pointer: coarse)')));
+    });
+
+    test('generated html includes tap-gated mobile gesture focus bridge', () {
+      final html = MonacoAssets.generateIndexHtml('min/vs');
+
+      expect(html, contains('const isMobileInputPlatform = () =>'));
+      expect(html, contains("navigator.platform === 'MacIntel'"));
+      expect(html, contains('navigator.maxTouchPoints > 1'));
+      expect(html, contains('const focusEditorTextAreaNow = () =>'));
+      expect(html, contains('const ownerDocument = node.ownerDocument'));
+      expect(html, contains('const ownerWindow = ownerDocument.defaultView'));
+      expect(html, contains('const isAndroid = /Android/i.test(ua)'));
+      expect(html, contains('const isFlutterWebEmbed = (() =>'));
+      expect(html, contains('const tapMoveThreshold = 8'));
+      expect(html, contains('const tapTimeThreshold = 650'));
+      expect(html, contains('const compatibilityEventSuppressMs = 1200'));
+      expect(html, contains('let androidTouchScrollGesture = null'));
+      expect(html, contains('let suppressFocusUntil = 0'));
+      expect(html, contains('const usePointerTapBridge ='));
+      expect(html, contains('supportsPointerEvents && isAndroid'));
+      expect(html, contains('const useTouchTapBridge = !usePointerTapBridge'));
+      expect(html, contains('const useAndroidWebFocusGuard ='));
+      expect(html, contains('const getScrollSnapshot = () =>'));
+      expect(html, contains('ed.getScrollTop'));
+      expect(html, contains('ed.getScrollLeft'));
+      expect(html, contains('const hasMovedFromStart = (event) =>'));
+      expect(
+        html,
+        contains('const hasTouchScrollMovedFromStart = (event) =>'),
+      );
+      expect(html, contains('const blockEvent = (event) =>'));
+      expect(html, contains('const suppressAndBlock = (event) =>'));
+      expect(html, contains('const editorInputSelector ='));
+      expect(html, contains('textarea.inputarea, .native-edit-context'));
+      expect(html, contains('const isEditorInputElement ='));
+      expect(html, contains('const getEditorInputElement ='));
+      expect(html, contains('let maxObservedViewportHeight = 0'));
+      expect(html, contains('const isKeyboardLikelyVisible ='));
+      expect(html, contains('const suppressScrollFocusIfNeeded ='));
+      expect(html, contains('const guardSuppressedTextAreaFocus ='));
+      expect(html, contains('const endGesture = (event, id, kind) =>'));
+      expect(html, contains('suppressAndBlock(event);'));
+      expect(html, contains('const capturePassiveFalse ='));
+      expect(html, contains("ownerDocument.addEventListener('pointerdown'"));
+      expect(
+        html,
+        contains(
+          "ownerDocument.addEventListener('pointerup', onPointerUp, capturePassiveFalse",
+        ),
+      );
+      expect(
+        html,
+        contains(
+          "ownerDocument.addEventListener('touchend', onTouchEnd, capturePassiveFalse",
+        ),
+      );
+      expect(
+        html,
+        contains(
+          "ownerDocument.addEventListener('touchend', endAndroidTouchScrollGuard, capturePassiveFalse",
+        ),
+      );
+      expect(
+        html,
+        contains(
+          "ownerDocument.addEventListener('focusin', guardSuppressedTextAreaFocus",
+        ),
+      );
+      expect(
+        html,
+        contains(
+          "ownerDocument.addEventListener('click', blockSuppressedCompatibilityEvent",
+        ),
+      );
+      expect(html, contains('node.style.touchAction'));
+      expect(html, isNot(contains('focusFromClick')));
+      expect(html, isNot(contains('mobileGestureDebug')));
+      expect(html, isNot(contains('monacoGestureDebug')));
+    });
+
+    test('generated html keeps desktop preventScroll focus retry', () {
+      final html = MonacoAssets.generateIndexHtml('min/vs');
+
+      expect(html, contains('if (isMobileInputPlatform())'));
+      expect(html, contains('focusEditorTextAreaNow();'));
+      expect(html, contains('ta.focus({ preventScroll: true });'));
+    });
   });
 }

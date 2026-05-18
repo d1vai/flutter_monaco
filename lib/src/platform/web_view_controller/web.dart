@@ -4,9 +4,11 @@ import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'dart:ui_web' as ui_web;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_monaco/src/core/monaco_assets.dart';
 import 'package:flutter_monaco/src/platform/platform_webview.dart';
+import 'package:flutter_monaco/src/platform/web_interaction_coordinator.dart';
 import 'package:web/web.dart' as web;
 
 /// WebView implementation for Flutter Web using an iframe.
@@ -37,7 +39,8 @@ import 'package:web/web.dart' as web;
 ///
 /// Web focus is tricky because the iframe is a separate browsing context.
 /// When Monaco reports focus events, this controller unfocuses Flutter
-/// widgets and uses `forceFocus()` to ensure Monaco retains keyboard input.
+/// widgets. Desktop web also reasserts Monaco focus while mobile web avoids
+/// amplifying accidental focus during scroll gestures.
 ///
 /// See also:
 /// - [MonacoAssets.generateIndexHtml] for HTML generation with web-specific
@@ -48,7 +51,7 @@ class WebViewController implements PlatformWebViewController {
   bool _disposed = false;
   bool _interactionEnabled = true;
 
-  final Completer<void> _readyCompleter = Completer<void>();
+  Completer<void> _readyCompleter = Completer<void>();
   bool _isReady = false;
 
   web.HTMLIFrameElement? _iframe;
@@ -76,6 +79,11 @@ class WebViewController implements PlatformWebViewController {
       ..style.height = '100%'
       ..style.border = 'none'
       ..allow = 'clipboard-read; clipboard-write';
+
+    MonacoWebInteractionCoordinator.instance.registerEditor(
+      _viewId!,
+      _iframe!,
+    );
     _applyInteractionEnabled();
 
     // Register the view factory.
@@ -133,28 +141,33 @@ class WebViewController implements PlatformWebViewController {
     }
 
     // Check if this is the ready event
-    if (message == 'ready' ||
-        message.contains('"event":"onEditorReady"') ||
-        message.contains('"event": "onEditorReady"')) {
+    final eventName = json?['event'];
+    if (message == 'ready' || eventName == 'onEditorReady') {
       _isReady = true;
       if (!_readyCompleter.isCompleted) {
         _readyCompleter.complete();
       }
       debugPrint('[WebViewController] Monaco ready!');
+    } else if (eventName == 'error' && !_isReady) {
+      final errorMessage = json?['message'] ?? 'Unknown Monaco load error';
+      if (!_readyCompleter.isCompleted) {
+        _readyCompleter.completeError(StateError(errorMessage.toString()));
+      }
     }
 
-    // When Monaco reports focus, unfocus Flutter widgets and ensure Monaco keeps focus.
+    // When Monaco reports focus, unfocus Flutter widgets.
     // This is gated by _interactionEnabled to avoid focus stealing when interaction is disabled.
     if (_interactionEnabled &&
         (message.contains('"event":"focus"') ||
             message.contains('"event": "focus"'))) {
       // Unfocus any Flutter widget
       FocusManager.instance.primaryFocus?.unfocus();
-      // Use Monaco's forceFocus to ensure editor keeps focus
-      _iframe?.contentWindow?.callMethod(
-        'eval'.toJS,
-        'window.flutterMonaco && window.flutterMonaco.forceFocus()'.toJS,
-      );
+      if (!_isMobileInputPlatform()) {
+        _iframe?.contentWindow?.callMethod(
+          'eval'.toJS,
+          'window.flutterMonaco && window.flutterMonaco.forceFocus()'.toJS,
+        );
+      }
     }
 
     // Forward to all channels
@@ -174,6 +187,11 @@ class WebViewController implements PlatformWebViewController {
     }
   }
 
+  bool _isMobileInputPlatform() {
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
   @override
   Future<void> setBackgroundColor(Color color) async {
     final r = (color.r * 255).round();
@@ -185,7 +203,15 @@ class WebViewController implements PlatformWebViewController {
   void _applyInteractionEnabled() {
     final iframe = _iframe;
     if (iframe == null) return;
-    iframe.style.pointerEvents = _interactionEnabled ? 'auto' : 'none';
+    final viewId = _viewId;
+    if (viewId == null) {
+      iframe.style.pointerEvents = _interactionEnabled ? 'auto' : 'none';
+      return;
+    }
+    MonacoWebInteractionCoordinator.instance.setBaseEnabled(
+      viewId,
+      _interactionEnabled,
+    );
   }
 
   @override
@@ -264,33 +290,64 @@ class WebViewController implements PlatformWebViewController {
   @override
   Future<void> load({String? customCss, bool allowCdnFonts = false}) async {
     debugPrint('[WebViewController] Loading Monaco in iframe');
+    await _waitForIframeAttachment();
 
     // Resolve path against base URI to support subpaths
     final vsPath = Uri.base
         .resolve('assets/${MonacoAssets.assetBaseDir}/min/vs')
         .toString();
 
-    final html = MonacoAssets.generateIndexHtml(
-      vsPath,
-      isWindows: false,
-      isIosOrMacOS: false,
-      isWeb: true,
-      messageToken: _messageToken,
-      customCss: customCss,
-      allowCdnFonts: allowCdnFonts,
-    );
+    Object? lastError;
+    const maxLoadAttempts = 2;
+    for (var attempt = 1; attempt <= maxLoadAttempts; attempt++) {
+      _isReady = false;
+      _readyCompleter = Completer<void>();
 
-    // Create a blob URL for the HTML content
-    final blobUrl = web.URL.createObjectURL(web.Blob(
-      [html.toJS].toJS,
-      web.BlobPropertyBag(type: 'text/html'),
-    ));
-    _iframe!.src = blobUrl;
+      final html = MonacoAssets.generateIndexHtml(
+        vsPath,
+        isWindows: false,
+        isIosOrMacOS: false,
+        isWeb: true,
+        messageToken: _messageToken,
+        customCss: customCss,
+        allowCdnFonts: allowCdnFonts,
+      );
 
-    await _ensureReady();
+      final blobUrl = web.URL.createObjectURL(web.Blob(
+        [html.toJS].toJS,
+        web.BlobPropertyBag(type: 'text/html'),
+      ));
 
-    // Clean up blob URL after Monaco is ready
-    web.URL.revokeObjectURL(blobUrl);
+      try {
+        _iframe!.src = blobUrl;
+        await _ensureReady();
+        web.URL.revokeObjectURL(blobUrl);
+        return;
+      } catch (e) {
+        lastError = e;
+        web.URL.revokeObjectURL(blobUrl);
+        if (attempt == maxLoadAttempts) {
+          rethrow;
+        }
+        debugPrint(
+          '[WebViewController] Monaco load attempt $attempt failed, retrying: $e',
+        );
+        _iframe?.src = 'about:blank';
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+    }
+
+    throw StateError('Monaco iframe failed to load: $lastError');
+  }
+
+  Future<void> _waitForIframeAttachment() async {
+    final iframe = _iframe;
+    if (iframe == null || iframe.isConnected) return;
+
+    const maxFrames = 120;
+    for (var i = 0; i < maxFrames && !iframe.isConnected; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 16));
+    }
   }
 
   @override
@@ -299,6 +356,10 @@ class WebViewController implements PlatformWebViewController {
     _disposed = true;
 
     debugPrint('[WebViewController] Disposing...');
+    final viewId = _viewId;
+    if (viewId != null) {
+      MonacoWebInteractionCoordinator.instance.unregisterEditor(viewId);
+    }
     if (_messageHandler != null) {
       web.window.removeEventListener('message', _messageHandler!);
       _messageHandler = null;
