@@ -719,6 +719,14 @@ class MonacoAssets {
                 // Typed helpers Flutter will call
                 const escapeRegExp = (value) =>
                   (value ?? '').replace(/$jsEscapePattern/g, '\\\\\$&');
+                const safe = (fn, fallback = null) => {
+                  try {
+                    return fn();
+                  } catch (e) {
+                    console.error('[flutterMonaco] helper failed:', e);
+                    return fallback;
+                  }
+                };
 
                 window.flutterMonaco = {
 
@@ -764,22 +772,37 @@ class MonacoAssets {
                       setTimeout(() => requestAnimationFrame(attempt), 0);
                     } catch (_) {}
                   },
-                  getValue: () => E().getValue(),
-                  setValue: (v) => E().setValue(v || ''),
-                  defineTheme: (name, data) => monaco.editor.defineTheme(name, data || {}),
-                  setTheme: (theme) => monaco.editor.setTheme(theme),
-                  setLanguage: (lang) => monaco.editor.setModelLanguage(E().getModel(), lang),
-                  updateOptions: (opts) => E().updateOptions(opts),
-                  executeAction: (actionId, args) => {
+                  getValue: () => safe(() => E().getValue(), ''),
+                  setValue: (v) => safe(() => {
                     const ed = E();
+                    if (!ed) return null;
+                    ed.setValue(v || '');
+                    return null;
+                  }),
+                  defineTheme: (name, data) => monaco.editor.defineTheme(name, data || {}),
+                  setTheme: (theme) => safe(() => monaco.editor.setTheme(theme)),
+                  setLanguage: (lang) => safe(() => {
+                    const ed = E();
+                    const model = ed?.getModel ? ed.getModel() : null;
+                    if (!model) return null;
+                    monaco.editor.setModelLanguage(model, lang);
+                    return null;
+                  }),
+                  updateOptions: (opts) => safe(() => {
+                    const ed = E();
+                    if (!ed) return null;
+                    ed.updateOptions(opts);
+                    return null;
+                  }),
+                  executeAction: (actionId, args) => safe(() => {
+                    const ed = E();
+                    if (!ed) return null;
                     const action = ed?.getAction ? ed.getAction(actionId) : null;
                     if (action && typeof action.run === 'function') {
-                      try {
-                        return action.run(args);
-                      } catch (_) {}
+                      return action.run(args);
                     }
                     return ed.trigger('flutter-bridge', actionId, args);
-                  },
+                  }),
                   
                   // Selection
                   getSelection: () => {
@@ -789,16 +812,24 @@ class MonacoAssets {
                       endLineNumber: s.endLineNumber, endColumn: s.endColumn
                     } : null;
                   },
-                  setSelection: (r) => E().setSelection(r),
+                  setSelection: (r) => safe(() => {
+                    const ed = E();
+                    if (!ed) return null;
+                    ed.setSelection(r);
+                    return null;
+                  }),
                   
                   // Cursor
                   getCursorPosition: () => {
                     const p = E().getPosition();
                     return p ? { lineNumber: p.lineNumber, column: p.column } : null;
                   },
-                  setCursorPosition: (line, column) => {
-                    E().setPosition({ lineNumber: line, column: column });
-                  },
+                  setCursorPosition: (line, column) => safe(() => {
+                    const ed = E();
+                    if (!ed) return null;
+                    ed.setPosition({ lineNumber: line, column: column });
+                    return null;
+                  }),
                   
                   // Navigation
                   revealLine: (ln, center) =>
@@ -807,8 +838,8 @@ class MonacoAssets {
                     center ? E().revealRangeInCenter(r) : E().revealRange(r),
 
                   // Line operations
-                  getLineCount: () => E().getModel().getLineCount(),
-                  getLineContent: (ln) => E().getModel().getLineContent(ln),
+                  getLineCount: () => safe(() => E()?.getModel?.()?.getLineCount() ?? 0, 0),
+                  getLineContent: (ln) => safe(() => E()?.getModel?.()?.getLineContent(ln) ?? '', ''),
                   
                   // Word lookup
                   getWordAtPosition: (line, column) => {
@@ -819,12 +850,18 @@ class MonacoAssets {
                   },
 
                   // Edits
-                  applyEdits: (edits, opts) =>
-                    E().getModel().applyEdits(edits || [], opts || {}),
+                  applyEdits: (edits, opts) => safe(() => {
+                    const model = E()?.getModel?.();
+                    if (!model) return null;
+                    return model.applyEdits(edits || [], opts || {});
+                  }),
 
                   // Decorations
-                  deltaDecorations: (oldIds, newDecos) =>
-                    E().deltaDecorations(oldIds || [], newDecos || []),
+                  deltaDecorations: (oldIds, newDecos) => safe(() => {
+                    const ed = E();
+                    if (!ed) return [];
+                    return ed.deltaDecorations(oldIds || [], newDecos || []);
+                  }, []),
 
                   // JSON language diagnostics
                   setJsonDiagnosticsOptions: (diagnostics) => {
@@ -832,8 +869,12 @@ class MonacoAssets {
                   },
 
                   // Markers (diagnostics)
-                  setModelMarkers: (owner, markers) =>
-                    monaco.editor.setModelMarkers(E().getModel(), owner || 'flutter', markers || []),
+                  setModelMarkers: (owner, markers) => safe(() => {
+                    const model = E()?.getModel?.();
+                    if (!model) return null;
+                    monaco.editor.setModelMarkers(model, owner || 'flutter', markers || []);
+                    return null;
+                  }),
 
                   // Find & replace (programmatic)
                   findMatches: (q, options, limit) => {
