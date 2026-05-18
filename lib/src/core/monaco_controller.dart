@@ -11,8 +11,8 @@ import 'package:flutter_monaco/src/platform/platform_webview.dart';
 /// A callback function that provides completion items for a given
 /// [CompletionRequest]. It should return a [Future] that resolves to a
 /// [CompletionList].
-typedef CompletionProvider =
-    Future<CompletionList> Function(CompletionRequest request);
+typedef CompletionProvider = Future<CompletionList> Function(
+    CompletionRequest request);
 
 /// Manages the lifecycle and interaction with a Monaco Editor instance.
 ///
@@ -403,8 +403,7 @@ class MonacoController {
       throw ArgumentError.value(id, 'id', 'Completion source already exists');
     }
 
-    final providerId =
-        id ??
+    final providerId = id ??
         'flutter_${DateTime.now().millisecondsSinceEpoch}_${_completionSources.length}';
     final entry = _RegisteredCompletion(
       id: providerId,
@@ -512,8 +511,7 @@ class MonacoController {
     await _ensureReady();
 
     // On mobile, multiple async focus() calls interrupt the IME lifecycle.
-    final isMobileNative =
-        !kIsWeb &&
+    final isMobileNative = !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS);
     final effectiveAttempts = isMobileNative ? 1 : attempts;
@@ -573,6 +571,21 @@ class MonacoController {
   /// Open replace dialog
   Future<void> replace() => executeAction(MonacoAction.startFindReplaceAction);
 
+  /// Fold all foldable regions in the current model.
+  Future<void> foldAll() => executeAction(MonacoAction.foldAll);
+
+  /// Unfold all foldable regions in the current model.
+  Future<void> unfoldAll() => executeAction(MonacoAction.unfoldAll);
+
+  /// Toggle line comments on the current selection.
+  Future<void> toggleLineComment() => executeAction(MonacoAction.commentLine);
+
+  /// Indent the current selection or active line.
+  Future<void> indentLines() => executeAction(MonacoAction.indentLines);
+
+  /// Outdent the current selection or active line.
+  Future<void> outdentLines() => executeAction(MonacoAction.outdentLines);
+
   /// Toggle word wrap
   Future<void> toggleWordWrap() => executeAction(MonacoAction.toggleWordWrap);
 
@@ -624,9 +637,8 @@ class MonacoController {
             'selection',
             alternativeKeys: ['sel', 'range'],
           );
-          final selection = selectionMap != null
-              ? Range.fromJson(selectionMap)
-              : null;
+          final selection =
+              selectionMap != null ? Range.fromJson(selectionMap) : null;
           _onSelectionChanged.add(selection);
           break;
         case 'focus':
@@ -692,8 +704,7 @@ class MonacoController {
 
       // Windows WebView2 might auto-decode JSON, handle both cases
       // Only decode if jsonAware is true (for API calls that return JSON)
-      final result =
-          (jsonAware &&
+      final result = (jsonAware &&
               raw is String &&
               (raw.startsWith('{') || raw.startsWith('[')))
           ? (raw.tryDecode() ?? raw)
@@ -919,8 +930,7 @@ class MonacoController {
         results.add(lineDefaultValue);
         continue;
       }
-      final content =
-          await _executeJavaScript<String>(
+      final content = await _executeJavaScript<String>(
             'flutterMonaco.getLineContent($line)',
             defaultValue: lineDefaultValue,
             jsonAware: false,
@@ -1144,8 +1154,7 @@ class MonacoController {
     Uri? uri,
     Uri? defaultUri,
   }) async {
-    final script =
-        '''
+    final script = '''
       flutterMonaco.createModel(
         ${jsonEncode(value)}, 
         ${jsonEncode(language)}, 

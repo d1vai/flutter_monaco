@@ -126,6 +126,23 @@ void main() {
         expect(joined.contains('setLanguage'), true);
         expect(joined.contains('forceFocus'), true);
       });
+
+      test('migration helpers execute expected monaco actions', () async {
+        final bundle = await _createBundle();
+
+        await bundle.controller.foldAll();
+        await bundle.controller.unfoldAll();
+        await bundle.controller.toggleLineComment();
+        await bundle.controller.indentLines();
+        await bundle.controller.outdentLines();
+
+        final joined = bundle.webview.executed.join('\n');
+        expect(joined.contains('editor.foldAll'), true);
+        expect(joined.contains('editor.unfoldAll'), true);
+        expect(joined.contains('editor.action.commentLine'), true);
+        expect(joined.contains('editor.action.indentLines'), true);
+        expect(joined.contains('editor.action.outdentLines'), true);
+      });
     });
 
     group('interaction', () {

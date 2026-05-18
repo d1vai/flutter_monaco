@@ -24,6 +24,8 @@ A Flutter plugin for integrating the Monaco Editor (VS Code's editor) into Flutt
 - 🔍 **Find & Replace** - Full programmatic find/replace with regex support
 - 🎭 **Decorations & Markers** - Add highlights, errors, warnings to your code
 - 📡 **Event Streams** - Listen to content changes, selection, focus events
+- 🎨 **Themeable Chrome** - Customize loading, error, and status-bar UI
+- 🔁 **Migration Helpers** - Fold, indent, comment, and wrap helpers for app-level editor flows
 
 > **⚠️ Platform Support:** Currently supports **Android**, **iOS**, **macOS**, **Windows**, and **Web**. Linux is **not supported** at this time.
 
@@ -64,6 +66,10 @@ Add `flutter_monaco` to your `pubspec.yaml`:
 dependencies:
   flutter_monaco: ^<latest version>
 ```
+
+## Migration Notes
+
+If you're coming from a native Flutter code editor, keep your app-level settings model and map them into Monaco options/theme overrides instead of hardcoding editor styling in the widget tree. That makes it easier to preserve presets, switch engines, and keep a shared preferences model across both backends.
 
 ## Quick Start
 

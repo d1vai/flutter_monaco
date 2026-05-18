@@ -65,6 +65,7 @@ class MonacoEditor extends StatefulWidget {
     this.errorBuilder,
     this.showStatusBar = false,
     this.statusBarBuilder,
+    this.chromeTheme,
     this.backgroundColor,
     this.interactionEnabled = true,
     this.padding,
@@ -163,6 +164,9 @@ class MonacoEditor extends StatefulWidget {
   /// Builder for a custom status bar widget.
   final Widget Function(BuildContext context, LiveStats stats)?
       statusBarBuilder;
+
+  /// Theme overrides for MonacoEditor's built-in loading, error, and status bar UI.
+  final MonacoEditorThemeData? chromeTheme;
 
   /// The background color of the WebView container.
   ///
@@ -489,9 +493,11 @@ class _MonacoEditorState extends State<MonacoEditor> {
             _DefaultError(
               error: _error!,
               onRetry: _ownsController ? _bootstrap : null,
+              chromeTheme: widget.chromeTheme,
             );
       }
-      return widget.loadingBuilder?.call(context) ?? const _DefaultLoading();
+      return widget.loadingBuilder?.call(context) ??
+          _DefaultLoading(chromeTheme: widget.chromeTheme);
     }
 
     // On mobile, let the WebView own the full tap-to-keyboard chain.
@@ -537,8 +543,8 @@ class _MonacoEditorState extends State<MonacoEditor> {
         children: [
           webView,
           Positioned.fill(
-            child:
-                widget.loadingBuilder?.call(context) ?? const _DefaultLoading(),
+            child: widget.loadingBuilder?.call(context) ??
+                _DefaultLoading(chromeTheme: widget.chromeTheme),
           ),
         ],
       );
@@ -553,6 +559,7 @@ class _MonacoEditorState extends State<MonacoEditor> {
                 _DefaultError(
                   error: _error!,
                   onRetry: _ownsController ? _bootstrap : null,
+                  chromeTheme: widget.chromeTheme,
                 ),
           ),
         ],
@@ -577,7 +584,10 @@ class _MonacoEditorState extends State<MonacoEditor> {
                 widget.statusBarBuilder!(context, stats),
           )
         else
-          _MonacoStatusBar(controller: _controller!),
+          _MonacoStatusBar(
+            controller: _controller!,
+            chromeTheme: widget.chromeTheme,
+          ),
       ],
     );
   }
@@ -596,14 +606,21 @@ class _MonacoEditorState extends State<MonacoEditor> {
 
 /// The default status bar, optimized to only rebuild when stats change.
 class _MonacoStatusBar extends StatelessWidget {
-  const _MonacoStatusBar({required this.controller});
+  const _MonacoStatusBar({
+    required this.controller,
+    this.chromeTheme,
+  });
 
   final MonacoController controller;
+  final MonacoEditorThemeData? chromeTheme;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = theme.textTheme.bodySmall ?? const TextStyle(fontSize: 12);
+    final resolvedTheme =
+        chromeTheme ?? MonacoEditorThemeData.fallback(context);
+    final style = resolvedTheme.statusBarTextStyle ??
+        Theme.of(context).textTheme.bodySmall ??
+        const TextStyle(fontSize: 12);
 
     return ValueListenableBuilder<LiveStats>(
       valueListenable: controller.liveStats,
@@ -619,15 +636,20 @@ class _MonacoStatusBar extends StatelessWidget {
         ].where((s) => s.isNotEmpty).toList();
 
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: resolvedTheme.statusBarPadding,
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface.withValues(alpha: 0.95),
-            border:
-                Border(top: BorderSide(color: theme.dividerColor, width: 0.5)),
+            color: resolvedTheme.statusBarBackgroundColor,
+            border: Border(
+              top: BorderSide(
+                color: resolvedTheme.statusBarBorderColor ??
+                    Theme.of(context).dividerColor,
+                width: 0.5,
+              ),
+            ),
           ),
           child: Wrap(
             alignment: WrapAlignment.end,
-            spacing: 16,
+            spacing: resolvedTheme.statusBarSpacing,
             runSpacing: 4,
             children: [
               for (final entry in entries) Text(entry, style: style),
@@ -640,62 +662,77 @@ class _MonacoStatusBar extends StatelessWidget {
 }
 
 class _DefaultLoading extends StatelessWidget {
-  const _DefaultLoading();
+  const _DefaultLoading({this.chromeTheme});
+
+  final MonacoEditorThemeData? chromeTheme;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(strokeWidth: 3),
+    final theme = chromeTheme ?? MonacoEditorThemeData.fallback(context);
+    return ColoredBox(
+      color: theme.loadingBackgroundColor ?? Colors.transparent,
+      child: Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 3,
+            color: theme.loadingIndicatorColor,
+          ),
+        ),
       ),
     );
   }
 }
 
 class _DefaultError extends StatelessWidget {
-  const _DefaultError({required this.error, this.onRetry});
+  const _DefaultError({
+    required this.error,
+    this.onRetry,
+    this.chromeTheme,
+  });
 
   final Object error;
   final VoidCallback? onRetry;
+  final MonacoEditorThemeData? chromeTheme;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final style = theme.textTheme.bodyMedium;
+    final resolvedTheme =
+        chromeTheme ?? MonacoEditorThemeData.fallback(context);
+    final titleStyle =
+        resolvedTheme.errorTitleStyle ?? theme.textTheme.titleMedium;
+    final style = resolvedTheme.errorMessageStyle ?? theme.textTheme.bodyMedium;
 
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, color: theme.colorScheme.error, size: 36),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to Initialize Editor',
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '$error',
-              textAlign: TextAlign.center,
-              style: style?.copyWith(color: theme.colorScheme.error),
-            ),
-            if (onRetry != null) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                ),
+    return ColoredBox(
+      color: resolvedTheme.errorBackgroundColor ?? Colors.transparent,
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: resolvedTheme.errorIconColor ?? theme.colorScheme.error,
+                size: 36,
               ),
+              const SizedBox(height: 16),
+              Text('Failed to Initialize Editor', style: titleStyle),
+              const SizedBox(height: 8),
+              Text('$error', textAlign: TextAlign.center, style: style),
+              if (onRetry != null) ...[
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                  style: resolvedTheme.retryButtonStyle,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

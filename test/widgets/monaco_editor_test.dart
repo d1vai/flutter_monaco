@@ -605,6 +605,39 @@ void main() {
         expect(find.text('Lines: 42'), findsOneWidget);
       });
 
+      testWidgets('chromeTheme customizes default status bar', (tester) async {
+        final bundle = await _createBundle();
+        await tester.pumpWidget(_wrap(MonacoEditor(
+          controller: bundle.controller,
+          showStatusBar: true,
+          chromeTheme: const MonacoEditorThemeData(
+            statusBarBackgroundColor: Colors.black,
+            statusBarBorderColor: Colors.red,
+            statusBarTextStyle: TextStyle(color: Colors.green),
+            statusBarSpacing: 8,
+          ),
+        )));
+        await tester.pumpAndSettle();
+
+        bundle.webview.emitToChannel(
+          'flutterChannel',
+          '{"event":"stats","lineCount":42,"cursorLine":2,"cursorColumn":3}',
+        );
+        await tester.pump();
+
+        final container = tester.widget<Container>(
+          find
+              .descendant(
+                of: find.byType(MonacoEditor),
+                matching: find.byType(Container),
+              )
+              .last,
+        );
+        final decoration = container.decoration! as BoxDecoration;
+        expect(decoration.color, Colors.black);
+        expect(find.text('Ln 2:3'), findsOneWidget);
+      });
+
       testWidgets('status bar hidden when showStatusBar false', (tester) async {
         final bundle = await _createBundle();
         await tester.pumpWidget(_wrap(MonacoEditor(
@@ -926,6 +959,41 @@ void main() {
         final joined = bundle.webview.executed.join('\n');
         expect(joined.contains('SET_INTERACTION:false'), true);
         expect(joined.contains('SET_INTERACTION:true'), true);
+      });
+    });
+
+    group('default chrome theming', () {
+      testWidgets('chromeTheme customizes loading UI', (tester) async {
+        final bundle = await _createBundle(ready: false);
+        await tester.pumpWidget(_wrap(MonacoEditor(
+          controller: bundle.controller,
+          chromeTheme: const MonacoEditorThemeData(
+            loadingIndicatorColor: Colors.orange,
+            loadingBackgroundColor: Colors.black,
+          ),
+        )));
+
+        final progress = tester.widget<CircularProgressIndicator>(
+          find.byType(CircularProgressIndicator),
+        );
+        expect(progress.color, Colors.orange);
+      });
+
+      testWidgets('chromeTheme customizes default error UI', (tester) async {
+        final bundle = await _createBundle();
+        bundle.webview.throwOnContains('setValue');
+
+        await tester.pumpWidget(_wrap(MonacoEditor(
+          controller: bundle.controller,
+          initialValue: 'trigger',
+          chromeTheme: const MonacoEditorThemeData(
+            errorIconColor: Colors.purple,
+          ),
+        )));
+        await tester.pump();
+
+        final icon = tester.widget<Icon>(find.byIcon(Icons.error_outline));
+        expect(icon.color, Colors.purple);
       });
     });
   });
