@@ -780,6 +780,19 @@ class MonacoAssets {
                     monaco.editor.defineTheme(name, data || {});
                     return true;
                   }),
+                  setPageBackground: (color) => safe(() => {
+                    if (!color) return false;
+                    const value = String(color);
+                    try { document.documentElement.style.backgroundColor = value; } catch (_) {}
+                    try { document.body.style.backgroundColor = value; } catch (_) {}
+                    try {
+                      const container = document.getElementById('editor-container');
+                      if (container) {
+                        container.style.backgroundColor = value;
+                      }
+                    } catch (_) {}
+                    return true;
+                  }),
                   setTheme: (theme) => safe(() => {
                     monaco.editor.setTheme(theme);
                     return true;

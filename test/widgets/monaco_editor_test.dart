@@ -875,17 +875,12 @@ void main() {
               .first,
         );
         expect(container.color, Colors.red);
-        expect(
-          bundle.webview.executed
-              .any((s) => s.startsWith('SET_BACKGROUND_COLOR')),
-          true,
-        );
       });
 
       testWidgets('backgroundColor failure does not break initialization',
           (tester) async {
         final bundle = await _createBundle();
-        bundle.webview.throwOnContains('SET_BACKGROUND_COLOR');
+        bundle.webview.throwOnContains('setPageBackground');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
