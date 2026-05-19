@@ -165,16 +165,21 @@ sealed class EditorOptions with _$EditorOptions {
     // Accept legacy single-field `theme` values (id strings) by detecting
     // built-in ids vs custom ids. Built-in ids round-trip via [theme];
     // unrecognized ids load into [themeId] so custom themes survive
-    // persistence.
+    // persistence. When both fields are present, keep `theme` as the built-in
+    // fallback and use `themeId` as the raw override.
     final builtInIds = MonacoTheme.values.map((value) => value.id).toSet();
-    final rawTheme = json.tryGetString('themeId') ?? json.tryGetString('theme');
-    final isBuiltIn = rawTheme == null || builtInIds.contains(rawTheme);
+    final rawBuiltInTheme = json.tryGetString('theme');
+    final rawThemeId = json.tryGetString('themeId');
+    final legacyCustomThemeId =
+        rawThemeId == null && !builtInIds.contains(rawBuiltInTheme)
+            ? rawBuiltInTheme
+            : null;
 
     return EditorOptions(
       language: MonacoLanguage.fromId(
           json.getString('language', defaultValue: 'markdown')),
-      theme: MonacoTheme.fromId(rawTheme, orElse: MonacoTheme.vsDark),
-      themeId: isBuiltIn ? null : rawTheme,
+      theme: MonacoTheme.fromId(rawBuiltInTheme, orElse: MonacoTheme.vsDark),
+      themeId: rawThemeId ?? legacyCustomThemeId,
       fontSize: json.getDouble('fontSize', defaultValue: 14),
       fontFamily: json.getString('fontFamily',
           defaultValue: 'Consolas, "Courier New", monospace'),

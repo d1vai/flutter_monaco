@@ -328,7 +328,7 @@ class _MonacoEditorState extends State<MonacoEditor> {
         try {
           await _controller!
               .setHostPageBackgroundColor(widget.backgroundColor!);
-        } on MonacoJavaScriptException catch (e) {
+        } catch (e) {
           debugPrint(
             '[MonacoEditor] setHostPageBackgroundColor failed: $e',
           );

@@ -910,10 +910,7 @@ void main() {
       testWidgets('host-page background failure does not break initialization',
           (tester) async {
         final bundle = await _createBundle();
-        bundle.webview.injectCommandFailure(
-          'setHostPageBackground',
-          message: 'css unavailable',
-        );
+        bundle.webview.throwOnContains('"setHostPageBackground"');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,

@@ -274,9 +274,9 @@ class MonacoController {
   ///
   /// See [JsonDiagnosticsOptions] for available settings and defaults.
   Future<void> setJsonDiagnostics(JsonDiagnosticsOptions diagnostics) async {
-    await _ensureReady();
-    await _webViewController.runJavaScript(
-      'flutterMonaco.setJsonDiagnosticsOptions(${jsonEncode(diagnostics.toJson())})',
+    await _invokeMonacoCommand(
+      'setJsonDiagnosticsOptions',
+      [diagnostics.toJson()],
     );
   }
 
@@ -1096,10 +1096,16 @@ class MonacoController {
       'deltaDecorations',
       [_decorationIds, decorations.map((d) => d.toJson()).toList()],
     );
-    final ids = raw is List ? raw : const [];
+    if (raw is! List) {
+      throw MonacoJavaScriptException(
+        operation: 'deltaDecorations',
+        message: 'Expected deltaDecorations to return a list of IDs.',
+        details: raw,
+      );
+    }
 
     return _decorationIds =
-        ids.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+        raw.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
   }
 
   /// Adds inline style decorations (e.g., text color, background) to specific [ranges].

@@ -261,6 +261,18 @@ void main() {
         expect(builtIn.themeId, isNull);
         expect(builtIn.theme, MonacoTheme.vs);
       });
+
+      test('EditorOptions.fromJson preserves built-in fallback with themeId',
+          () {
+        final options = EditorOptions.fromJson(const {
+          'theme': 'hc-light',
+          'themeId': 'app-dark',
+        });
+
+        expect(options.theme, MonacoTheme.hcLight);
+        expect(options.themeId, 'app-dark');
+        expect(options.effectiveThemeId, 'app-dark');
+      });
     });
 
     group('interaction', () {
@@ -626,6 +638,41 @@ void main() {
 
         // Verify the old IDs were passed in the second call
         expect(bundle.webview.executed.join('\n'), contains('["a","b"]'));
+      });
+
+      test('setDecorations throws on malformed bridge result', () async {
+        final bundle = await _createBundle();
+        bundle.webview.injectCommandSuccess('deltaDecorations', value: ['a']);
+        bundle.webview
+            .injectCommandSuccess('deltaDecorations', value: 'not-a-list');
+        bundle.webview.injectCommandSuccess('deltaDecorations', value: ['b']);
+
+        final first = await bundle.controller.setDecorations([
+          DecorationOptions.inlineClass(
+            range: const Range(
+              startLine: 1,
+              startColumn: 1,
+              endLine: 1,
+              endColumn: 2,
+            ),
+            className: 'x',
+          ),
+        ]);
+        expect(first, ['a']);
+
+        await expectLater(
+          () => bundle.controller.setDecorations(const []),
+          throwsA(
+            isA<MonacoJavaScriptException>()
+                .having((e) => e.operation, 'operation', 'deltaDecorations'),
+          ),
+        );
+
+        await bundle.controller.setDecorations(const []);
+        expect(
+          bundle.webview.executed.join('\n'),
+          contains('["a"]'),
+        );
       });
 
       test('addInlineDecorations creates correct options', () async {
@@ -1250,12 +1297,28 @@ void main() {
 
       test('propagates JavaScript errors', () async {
         final bundle = await _createBundle();
-        bundle.webview.throwOnContains('setJsonDiagnosticsOptions');
-        expect(
+        bundle.webview.injectCommandFailure(
+          'setJsonDiagnosticsOptions',
+          message: 'json diagnostics failed',
+        );
+
+        await expectLater(
           () => bundle.controller.setJsonDiagnostics(
             const JsonDiagnosticsOptions(validate: true),
           ),
-          throwsA(isA<StateError>()),
+          throwsA(
+            isA<MonacoJavaScriptException>()
+                .having(
+                  (e) => e.operation,
+                  'operation',
+                  'setJsonDiagnosticsOptions',
+                )
+                .having(
+                  (e) => e.message,
+                  'message',
+                  'json diagnostics failed',
+                ),
+          ),
         );
       });
     });

@@ -926,6 +926,7 @@ class MonacoAssets {
                   // JSON language diagnostics
                   setJsonDiagnosticsOptions: (diagnostics) => {
                     monaco.languages.json.jsonDefaults.setDiagnosticsOptions(diagnostics);
+                    return true;
                   },
 
                   // Markers (diagnostics)
