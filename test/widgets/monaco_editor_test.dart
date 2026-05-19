@@ -870,13 +870,14 @@ void main() {
     });
 
     group('styling', () {
-      testWidgets('backgroundColor applied', (tester) async {
+      testWidgets('backgroundColor applies both native and host-page layers',
+          (tester) async {
         final bundle = await _createBundle();
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
           backgroundColor: Colors.red,
         )));
-        await tester.pump();
+        await tester.pumpAndSettle();
 
         final container = tester.widget<Container>(
           find
@@ -887,12 +888,34 @@ void main() {
               .first,
         );
         expect(container.color, Colors.red);
+
+        // Native WebView API was invoked.
+        expect(
+          bundle.webview.executed
+              .any((s) => s.startsWith('SET_BACKGROUND_COLOR')),
+          true,
+          reason: 'setBackgroundColor must hit the native WebView container',
+        );
+
+        // Host page recolor was invoked through the bridge envelope.
+        expect(
+          bundle.webview
+              .scriptsContaining('"setHostPageBackground"')
+              .isNotEmpty,
+          true,
+          reason:
+              'backgroundColor should also recolor Monaco\'s HTML host page',
+        );
       });
 
-      testWidgets('backgroundColor failure does not break initialization',
+      testWidgets(
+          'host-page background failure does not break initialization',
           (tester) async {
         final bundle = await _createBundle();
-        bundle.webview.throwOnContains('setPageBackground');
+        bundle.webview.injectCommandFailure(
+          'setHostPageBackground',
+          message: 'css unavailable',
+        );
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
@@ -900,6 +923,7 @@ void main() {
         )));
         await tester.pumpAndSettle();
 
+        // Native layer succeeds; HTML host-page failure is best-effort.
         expect(find.byKey(const Key('webview')), findsOneWidget);
         expect(find.text('Failed to Initialize Editor'), findsNothing);
       });

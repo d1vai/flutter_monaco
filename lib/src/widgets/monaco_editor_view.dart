@@ -266,6 +266,9 @@ class _MonacoEditorState extends State<MonacoEditor> {
     if (widget.backgroundColor != oldWidget.backgroundColor &&
         widget.backgroundColor != null) {
       _ignoreAsync(_controller!.setBackgroundColor(widget.backgroundColor!));
+      _ignoreAsync(
+        _controller!.setHostPageBackgroundColor(widget.backgroundColor!),
+      );
     }
 
     // If the content change callback has been updated, we need to rewire the listener.
@@ -319,6 +322,17 @@ class _MonacoEditorState extends State<MonacoEditor> {
       // Apply initial values and settings post-readiness.
       if (widget.backgroundColor != null) {
         await _controller!.setBackgroundColor(widget.backgroundColor!);
+        // Best-effort host-page recolor in case the native WebView background
+        // isn't honored (notably macOS platform views). Failures here are
+        // tolerated so a broken bridge doesn't break bootstrap.
+        try {
+          await _controller!
+              .setHostPageBackgroundColor(widget.backgroundColor!);
+        } on MonacoJavaScriptException catch (e) {
+          debugPrint(
+            '[MonacoEditor] setHostPageBackgroundColor failed: $e',
+          );
+        }
       }
       // Ensure options are up-to-date in case they changed during bootstrap
       if (_isBootstrapCurrent(bootstrapToken)) {

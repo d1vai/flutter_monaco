@@ -832,9 +832,9 @@ class MonacoAssets {
                     monaco.editor.defineTheme(name, data || {});
                     return true;
                   },
-                  setPageBackground: (color) => {
+                  setHostPageBackground: (color) => {
                     if (!color) {
-                      throw new Error('Background color is required.');
+                      throw new Error('Host page background color is required.');
                     }
                     const value = String(color);
                     document.documentElement.style.backgroundColor = value;

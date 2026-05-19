@@ -337,34 +337,35 @@ class MonacoController {
     await _invokeMonacoCommand('defineTheme', [id, data]);
   }
 
-  /// Sets the background color of the WebView container.
+  /// Sets the background color of the native WebView container.
   ///
-  /// This primarily updates the Monaco host page background so theme styling is
-  /// consistent across platforms, including macOS where native platform-view
-  /// background updates are not reliably supported.
+  /// This targets the platform-side WebView surface only - it does NOT
+  /// change Monaco's HTML host page or Monaco's own `editor.background`
+  /// theme token. On macOS, native WebView background updates may be
+  /// unreliable; prefer [setHostPageBackgroundColor] there or register a
+  /// custom `MonacoThemeDefinition` with the desired `editor.background`.
   Future<void> setBackgroundColor(Color color) async {
-    final cssColor = 'rgba(${(color.r * 255.0).round().clamp(0, 255)}, '
-        '${(color.g * 255.0).round().clamp(0, 255)}, '
-        '${(color.b * 255.0).round().clamp(0, 255)}, ${color.a})';
+    await _webViewController.setBackgroundColor(color);
+  }
 
-    if (_onReady.isCompleted) {
-      try {
-        await _webViewController.runJavaScript(
-          'window.flutterMonaco && window.flutterMonaco.setPageBackground(${jsonEncode(cssColor)})',
-        );
-      } catch (e) {
-        debugPrint('[MonacoController] setPageBackground failed: $e');
-      }
-      return;
-    }
+  /// Sets the background color of Monaco's HTML host page.
+  ///
+  /// Writes a CSS color to `html`, `body`, and the Monaco container element
+  /// via the JS bridge. This is the most reliable surface to recolor when
+  /// the native WebView's background isn't honored (notably macOS platform
+  /// views). To change Monaco's own editor surface, register a
+  /// [MonacoThemeDefinition] with an `editor.background` color instead -
+  /// this method does not affect Monaco's internal theme tokens.
+  Future<void> setHostPageBackgroundColor(Color color) async {
+    await _invokeMonacoCommand('setHostPageBackground', [_cssRgba(color)]);
+  }
 
-    // Pre-ready native background sync is best-effort only. The Flutter host
-    // container already paints a stable background while Monaco is loading.
-    try {
-      await _webViewController.setBackgroundColor(color);
-    } catch (e) {
-      debugPrint('[MonacoController] setBackgroundColor ignored: $e');
-    }
+  /// Converts a Flutter [Color] to a CSS `rgba(...)` string.
+  String _cssRgba(Color color) {
+    final r = (color.r * 255.0).round().clamp(0, 255);
+    final g = (color.g * 255.0).round().clamp(0, 255);
+    final b = (color.b * 255.0).round().clamp(0, 255);
+    return 'rgba($r, $g, $b, ${color.a})';
   }
 
   /// Toggles whether the editor intercepts pointer events.
