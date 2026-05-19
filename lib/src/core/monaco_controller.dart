@@ -149,7 +149,7 @@ class MonacoController {
           // Apply initial options if provided
           if (options != null) {
             await controller.updateOptions(options);
-            await controller.setTheme(options.theme);
+            await controller.setThemeById(options.effectiveThemeId);
             await controller.setLanguage(options.language);
           }
 
@@ -289,27 +289,52 @@ class MonacoController {
 
   /// Changes the editor's color theme using a raw Monaco theme identifier.
   ///
-  /// This also supports custom themes registered with [defineTheme].
+  /// Accepts both built-in Monaco theme ids and custom theme ids previously
+  /// registered with [defineTheme] or [defineThemeFromJson]. Throws an
+  /// [ArgumentError] when [themeId] is empty so callers don't silently
+  /// activate Monaco's empty-string fallback.
   Future<void> setThemeById(String themeId) async {
+    if (themeId.trim().isEmpty) {
+      throw ArgumentError.value(
+        themeId,
+        'themeId',
+        'themeId must be a non-empty string',
+      );
+    }
     await _invokeMonacoCommand('setTheme', [themeId]);
   }
 
-  /// Registers or replaces a Monaco theme definition.
+  /// Registers or replaces a custom Monaco theme.
   ///
-  /// [data] should follow Monaco's `IStandaloneThemeData` shape.
-  Future<void> defineTheme(String name, Map<String, dynamic> data) async {
-    await _invokeMonacoCommand('defineTheme', [name, data]);
+  /// After registration, activate the theme by calling
+  /// [setThemeById]([MonacoThemeDefinition.id]) or setting
+  /// [EditorOptions.themeId].
+  ///
+  /// Use [defineThemeFromJson] when the theme data only exists in raw
+  /// Monaco-shaped JSON.
+  Future<void> defineTheme(MonacoThemeDefinition theme) async {
+    await defineThemeFromJson(theme.id, theme.toMonacoThemeData());
   }
 
-  /// Best-effort custom theme registration that degrades cleanly on native WebViews.
-  Future<bool> tryDefineTheme(String name, Map<String, dynamic> data) async {
-    try {
-      await defineTheme(name, data);
-      return true;
-    } catch (e) {
-      debugPrint('[MonacoController] defineTheme failed for "$name": $e');
-      return false;
+  /// Registers or replaces a Monaco theme from raw Monaco-shaped JSON.
+  ///
+  /// This is an escape hatch for Monaco theme fields not yet modeled by
+  /// [MonacoThemeDefinition]. Prefer [defineTheme] for type safety. Throws
+  /// an [ArgumentError] when [id] is empty.
+  ///
+  /// [data] must follow Monaco's `IStandaloneThemeData` shape.
+  Future<void> defineThemeFromJson(
+    String id,
+    Map<String, Object?> data,
+  ) async {
+    if (id.trim().isEmpty) {
+      throw ArgumentError.value(
+        id,
+        'id',
+        'theme id must be a non-empty string',
+      );
     }
+    await _invokeMonacoCommand('defineTheme', [id, data]);
   }
 
   /// Sets the background color of the WebView container.

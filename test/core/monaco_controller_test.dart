@@ -144,20 +144,6 @@ void main() {
         expect(joined.contains('editor.action.outdentLines'), true);
       });
 
-      test('tryDefineTheme returns false when js execution fails', () async {
-        final bundle = await _createBundle();
-        bundle.webview.throwOnContains('defineTheme');
-
-        final ok = await bundle.controller.tryDefineTheme('broken', {
-          'base': 'vs',
-          'inherit': true,
-          'rules': const [],
-          'colors': const <String, String>{},
-        });
-
-        expect(ok, false);
-      });
-
       test('command failure envelope throws MonacoJavaScriptException',
           () async {
         final bundle = await _createBundle();
@@ -172,6 +158,108 @@ void main() {
                 .having((e) => e.message, 'message', 'broken action'),
           ),
         );
+      });
+    });
+
+    group('theme registration', () {
+      test('defineTheme serializes MonacoThemeDefinition data', () async {
+        final bundle = await _createBundle();
+        const theme = MonacoThemeDefinition(
+          id: 'app-dark',
+          base: MonacoTheme.vsDark,
+          rules: [
+            MonacoThemeRule(token: 'comment', foreground: '6A9955'),
+          ],
+          colors: {'editor.background': '#101010'},
+        );
+
+        await bundle.controller.defineTheme(theme);
+
+        final invocation =
+            bundle.webview.scriptsContaining('"defineTheme"').single;
+        expect(invocation, contains('"app-dark"'));
+        expect(invocation, contains('"vs-dark"'));
+        expect(invocation, contains('"6A9955"'));
+        expect(invocation, contains('"editor.background"'));
+      });
+
+      test('defineThemeFromJson forwards raw data unchanged', () async {
+        final bundle = await _createBundle();
+        await bundle.controller.defineThemeFromJson('raw-id', const {
+          'base': 'vs',
+          'inherit': false,
+          'rules': <Map<String, Object?>>[],
+          'colors': {'editor.background': '#FFFFFF'},
+        });
+
+        final invocation =
+            bundle.webview.scriptsContaining('"defineTheme"').single;
+        expect(invocation, contains('"raw-id"'));
+        expect(invocation, contains('"editor.background"'));
+        expect(invocation, contains('"#FFFFFF"'));
+      });
+
+      test('setThemeById rejects empty ids', () async {
+        final bundle = await _createBundle();
+        expect(
+          () => bundle.controller.setThemeById('   '),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test('defineThemeFromJson rejects empty ids', () async {
+        final bundle = await _createBundle();
+        expect(
+          () => bundle.controller.defineThemeFromJson('', const {}),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test('MonacoThemeDefinition JSON round-trip preserves rules and colors',
+          () {
+        const original = MonacoThemeDefinition(
+          id: 'roundtrip',
+          base: MonacoTheme.hcBlack,
+          inherit: false,
+          rules: [
+            MonacoThemeRule(
+              token: 'keyword',
+              foreground: '569CD6',
+              fontStyle: 'italic',
+            ),
+            MonacoThemeRule(token: 'string', foreground: 'CE9178'),
+          ],
+          colors: {
+            'editor.background': '#1E1E1E',
+            'editor.foreground': '#D4D4D4',
+          },
+        );
+
+        final json = original.toJson();
+        final restored = MonacoThemeDefinition.fromJson(json);
+
+        expect(restored, equals(original));
+      });
+
+      test('EditorOptions.effectiveThemeId prefers themeId override', () {
+        const builtIn =
+            EditorOptions(theme: MonacoTheme.vs, themeId: 'custom-dark');
+        expect(builtIn.effectiveThemeId, 'custom-dark');
+
+        const fallback = EditorOptions(theme: MonacoTheme.hcLight);
+        expect(fallback.effectiveThemeId, MonacoTheme.hcLight.id);
+      });
+
+      test('EditorOptions.fromJson routes custom theme ids to themeId', () {
+        final custom = EditorOptions.fromJson(const {'theme': 'app-dark'});
+        expect(custom.themeId, 'app-dark');
+        // Built-in theme stays at its default since the custom id is not a
+        // recognized MonacoTheme.
+        expect(custom.theme, MonacoTheme.vsDark);
+
+        final builtIn = EditorOptions.fromJson(const {'theme': 'vs'});
+        expect(builtIn.themeId, isNull);
+        expect(builtIn.theme, MonacoTheme.vs);
       });
     });
 

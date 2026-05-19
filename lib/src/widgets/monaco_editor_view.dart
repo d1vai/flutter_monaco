@@ -257,7 +257,9 @@ class _MonacoEditorState extends State<MonacoEditor> {
     if (widget.options != oldWidget.options) {
       _ignoreAsync(_controller!.updateOptions(widget.options));
       // Explicitly update theme and language as they require separate bridge calls.
-      _ignoreAsync(_controller!.setTheme(widget.options.theme));
+      _ignoreAsync(
+        _controller!.setThemeById(widget.options.effectiveThemeId),
+      );
       _ignoreAsync(_controller!.setLanguage(widget.options.language));
     }
 
@@ -323,7 +325,7 @@ class _MonacoEditorState extends State<MonacoEditor> {
         // We can't easily check if they differ from what we passed to create(),
         // so we just re-apply them to be safe. This is cheap if no changes.
         await _controller!.updateOptions(widget.options);
-        await _controller!.setTheme(widget.options.theme);
+        await _controller!.setThemeById(widget.options.effectiveThemeId);
         await _controller!.setLanguage(widget.options.language);
       }
 
