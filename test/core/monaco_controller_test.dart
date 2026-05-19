@@ -940,18 +940,16 @@ void main() {
         await bundle.controller.setCursorPosition(
           const Position(line: 3, column: 7),
         );
-        final invocation = bundle.webview
-            .scriptsContaining('"setCursorPosition"')
-            .single;
+        final invocation =
+            bundle.webview.scriptsContaining('"setCursorPosition"').single;
         expect(invocation, contains('[3,7]'));
       });
 
       test('setCursorPositionZeroBased converts to 1-based', () async {
         final bundle = await _createBundle();
         await bundle.controller.setCursorPositionZeroBased(0, 0);
-        final invocation = bundle.webview
-            .scriptsContaining('"setCursorPosition"')
-            .single;
+        final invocation =
+            bundle.webview.scriptsContaining('"setCursorPosition"').single;
         expect(invocation, contains('[1,1]'));
       });
 

@@ -700,8 +700,7 @@ class _DefaultError extends StatelessWidget {
     final theme = MonacoEditorTheme.of(context);
     final titleStyle =
         theme.errorTitleStyle ?? materialTheme.textTheme.titleMedium;
-    final style =
-        theme.errorMessageStyle ?? materialTheme.textTheme.bodyMedium;
+    final style = theme.errorMessageStyle ?? materialTheme.textTheme.bodyMedium;
 
     return ColoredBox(
       color: theme.errorBackgroundColor ?? Colors.transparent,

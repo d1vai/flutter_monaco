@@ -67,9 +67,96 @@ dependencies:
   flutter_monaco: ^<latest version>
 ```
 
-## Migration Notes
+## Migrating from another Flutter code editor
 
-If you're coming from a native Flutter code editor, keep your app-level settings model and map them into Monaco options/theme overrides instead of hardcoding editor styling in the widget tree. That makes it easier to preserve presets, switch engines, and keep a shared preferences model across both backends.
+If you're moving from another Flutter code editor package (such as `flutter_code_editor`), keep your existing settings model and toolbar wiring - map them into Monaco's typed APIs instead of replacing your app structure.
+
+### 1. Map app settings to `EditorOptions`
+
+```dart
+class CodeEditorSettings {
+  const CodeEditorSettings({
+    required this.languageId,
+    required this.themeId,
+    required this.fontSize,
+    required this.tabSize,
+    required this.wordWrap,
+  });
+
+  final String languageId;
+  final String themeId; // built-in id ("vs-dark") or custom theme id
+  final double fontSize;
+  final int tabSize;
+  final bool wordWrap;
+}
+
+EditorOptions toMonacoOptions(CodeEditorSettings s) {
+  return EditorOptions(
+    language: MonacoLanguage.fromId(s.languageId),
+    theme: MonacoTheme.vsDark,
+    themeId: s.themeId, // overrides theme when set; custom themes work too
+    fontSize: s.fontSize,
+    tabSize: s.tabSize,
+    wordWrap: s.wordWrap,
+  );
+}
+```
+
+### 2. Persist and register custom themes once
+
+Use `MonacoThemeDefinition` for custom syntax themes that should round-trip with your app settings:
+
+```dart
+const appDark = MonacoThemeDefinition(
+  id: 'app-dark',
+  base: MonacoTheme.vsDark,
+  rules: [
+    MonacoThemeRule(token: 'comment', foreground: '6A9955', fontStyle: 'italic'),
+  ],
+  colors: {
+    'editor.background': '#1E1E1E',
+    'editor.foreground': '#D4D4D4',
+  },
+);
+
+await controller.defineTheme(appDark);
+await controller.setThemeById('app-dark'); // or set EditorOptions.themeId
+```
+
+For Monaco theme JSON exported elsewhere, use `controller.defineThemeFromJson(id, data)`.
+
+### 3. Style the editor chrome with `MonacoEditorTheme`
+
+Customize the built-in loading/error/status-bar widgets without replacing them:
+
+```dart
+MonacoEditorTheme(
+  data: MonacoEditorThemeData(
+    statusBarBackgroundColor: Theme.of(context).colorScheme.surface,
+    statusBarBorderColor: Theme.of(context).dividerColor,
+    loadingIndicatorColor: Theme.of(context).colorScheme.primary,
+  ),
+  child: MonacoEditor(options: options, showStatusBar: true),
+);
+```
+
+### 4. Wire toolbar buttons through the controller
+
+Common editor toolbar commands have ready-made wrappers via the `MonacoControllerMigrationActions` extension (imported with the public barrel):
+
+```dart
+await controller.foldAll();
+await controller.unfoldAll();
+await controller.toggleLineComment();
+await controller.indentLines();
+await controller.outdentLines();
+```
+
+For any Monaco command not covered, call `controller.executeAction(MonacoAction.formatDocument)` (or pass any raw command id).
+
+### 5. Backgrounds
+
+`setBackgroundColor` recolors the native WebView container. `setHostPageBackgroundColor` recolors Monaco's HTML host page (more reliable on macOS). To recolor Monaco's editor surface itself, set `editor.background` in a `MonacoThemeDefinition` rather than relying on these.
 
 ## Quick Start
 

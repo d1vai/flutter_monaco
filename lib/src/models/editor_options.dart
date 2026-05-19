@@ -166,10 +166,8 @@ sealed class EditorOptions with _$EditorOptions {
     // built-in ids vs custom ids. Built-in ids round-trip via [theme];
     // unrecognized ids load into [themeId] so custom themes survive
     // persistence.
-    final builtInIds =
-        MonacoTheme.values.map((value) => value.id).toSet();
-    final rawTheme =
-        json.tryGetString('themeId') ?? json.tryGetString('theme');
+    final builtInIds = MonacoTheme.values.map((value) => value.id).toSet();
+    final rawTheme = json.tryGetString('themeId') ?? json.tryGetString('theme');
     final isBuiltIn = rawTheme == null || builtInIds.contains(rawTheme);
 
     return EditorOptions(

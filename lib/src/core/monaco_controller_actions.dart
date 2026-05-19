@@ -28,8 +28,7 @@ extension MonacoControllerMigrationActions on MonacoController {
   Future<void> unfoldAll() => executeAction(MonacoAction.unfoldAll);
 
   /// Toggles line comments on the current selection or active line.
-  Future<void> toggleLineComment() =>
-      executeAction(MonacoAction.commentLine);
+  Future<void> toggleLineComment() => executeAction(MonacoAction.commentLine);
 
   /// Indents the current selection or active line.
   Future<void> indentLines() => executeAction(MonacoAction.indentLines);

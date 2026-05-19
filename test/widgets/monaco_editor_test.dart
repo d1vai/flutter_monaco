@@ -169,8 +169,7 @@ void main() {
         )));
         await tester.pump();
 
-        final setValueScripts =
-            bundle.webview.scriptsContaining('"setValue"');
+        final setValueScripts = bundle.webview.scriptsContaining('"setValue"');
         expect(setValueScripts.length, 1);
         expect(setValueScripts.first, contains('"initial content"'));
 
@@ -908,8 +907,7 @@ void main() {
         );
       });
 
-      testWidgets(
-          'host-page background failure does not break initialization',
+      testWidgets('host-page background failure does not break initialization',
           (tester) async {
         final bundle = await _createBundle();
         bundle.webview.injectCommandFailure(

@@ -3,6 +3,36 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-05-19
+
+This release reshapes the chrome theming, custom-theme registration, JS bridge error contract, and background-color APIs around durable Flutter idioms. The goal is to make `flutter_monaco` easier to adopt as a drop-in replacement for native Flutter code editors without locking the package into weak public APIs. See the "Migrating from another Flutter code editor" section of the README for the recommended pattern.
+
+### Added
+- `MonacoEditorTheme` `InheritedTheme` for styling the built-in loading, error, and status-bar chrome from anywhere in the widget tree. `MonacoEditorTheme.of(context)` returns a fully resolved theme (Material-derived fallback merged with the nearest override).
+- `MonacoEditorThemeData.merge(other)` so ancestor overrides compose cleanly on top of derived defaults.
+- `MonacoThemeDefinition` and `MonacoThemeRule` freezed models for typed Monaco theme registration. JSON round-trips via `toJson()`/`fromJson()` for app-level persistence; `toMonacoThemeData()` produces the raw Monaco `IStandaloneThemeData` shape for the bridge call.
+- `MonacoController.defineThemeFromJson(id, data)` for forwarding raw Monaco-shaped JSON when fields aren't yet modeled.
+- `EditorOptions.themeId` raw-string override and `EditorOptions.effectiveThemeId` getter so apps persisting theme IDs as strings can carry custom themes through their settings model without losing the typed `theme` enum.
+- `MonacoController.setHostPageBackgroundColor(color)` writes a CSS background to `html`, `body`, and Monaco's container element. Reliable on macOS where the native WebView background isn't honored.
+- `MonacoJavaScriptException` for surfacing JS bridge failures with `operation`, `name`, `message`, `stack`, and raw `details` fields.
+- `MonacoControllerMigrationActions` extension exposing `foldAll`, `unfoldAll`, `toggleLineComment`, `indentLines`, `outdentLines` as call-site-compatible helpers. Imported automatically with the public barrel.
+
+### Changed
+- **JS bridge contract:** the 15 typed `flutterMonaco.*` helpers (setValue, setTheme, setLanguage, executeAction, applyEdits, deltaDecorations, setModelMarkers, and friends) no longer return silent fallback values when the editor isn't ready or input is invalid. They throw cleanly, and Dart command methods propagate the failure as `MonacoJavaScriptException` via a new bridge envelope (`window.flutterMonacoInvoke`).
+- **Reads keep documented fallbacks.** `getValue`, `getLineCount`, and `getLineContent` still honor their `defaultValue` parameter when the bridge errors out - the JS no longer fabricates the default, but the Dart wrapper catches `MonacoJavaScriptException` and returns the documented default.
+- **`MonacoController.setBackgroundColor(color)` reverts to native WebView container semantics** (the silent CSS-after-ready shift introduced in `pr/12` is gone). Use `setHostPageBackgroundColor(color)` for the HTML host page. The `MonacoEditor.backgroundColor:` widget convenience prop applies both layers post-readiness so the previous high-level behavior is preserved.
+- **`MonacoController.defineTheme` now takes `MonacoThemeDefinition`** instead of `(String name, Map<String, dynamic> data)`. The Map-based signature ships under `defineThemeFromJson` as an explicit escape hatch.
+- **`MonacoController.setThemeById` and `defineThemeFromJson` reject empty IDs** with `ArgumentError` instead of activating Monaco's empty-string fallback.
+- Bootstrap and live option-update paths (in `MonacoController.create` and `MonacoEditor`) now call `setThemeById(options.effectiveThemeId)` so custom theme IDs apply automatically.
+
+### Removed
+- `MonacoController.tryDefineTheme(String name, Map data)`. Failures are now observable: wrap `defineTheme` in `try` / `on MonacoJavaScriptException` for best-effort behavior.
+- `MonacoController.foldAll`, `unfoldAll`, `toggleLineComment`, `indentLines`, `outdentLines` as core controller methods - they live on the `MonacoControllerMigrationActions` extension now. Call sites are unchanged thanks to extension method resolution.
+- `MonacoEditor.chromeTheme:` widget parameter. Use a `MonacoEditorTheme` ancestor instead.
+
+### Docs
+- Added a "Migrating from another Flutter code editor" section to the README covering settings model mapping, custom theme registration, chrome theming, toolbar wiring, and background color choices.
+
 ## [1.6.0] - 2026-05-18
 
 ### Added

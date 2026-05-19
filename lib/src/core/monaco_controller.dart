@@ -1098,10 +1098,8 @@ class MonacoController {
     );
     final ids = raw is List ? raw : const [];
 
-    return _decorationIds = ids
-        .map((e) => e.toString())
-        .where((s) => s.isNotEmpty)
-        .toList();
+    return _decorationIds =
+        ids.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
   }
 
   /// Adds inline style decorations (e.g., text color, background) to specific [ranges].

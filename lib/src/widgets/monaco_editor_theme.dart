@@ -205,8 +205,7 @@ class MonacoEditorThemeData {
       statusBarTextStyle:
           theme.textTheme.bodySmall ?? const TextStyle(fontSize: 12),
       statusBarSpacing: 16,
-      statusBarPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      statusBarPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
 
