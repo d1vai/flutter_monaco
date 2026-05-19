@@ -127,21 +127,25 @@ void main() {
         expect(joined.contains('forceFocus'), true);
       });
 
-      test('migration helpers execute expected monaco actions', () async {
+      test('executeAction routes toolbar commands to monaco action ids',
+          () async {
         final bundle = await _createBundle();
 
-        await bundle.controller.foldAll();
-        await bundle.controller.unfoldAll();
-        await bundle.controller.toggleLineComment();
-        await bundle.controller.indentLines();
-        await bundle.controller.outdentLines();
+        const ids = [
+          MonacoAction.foldAll,
+          MonacoAction.unfoldAll,
+          MonacoAction.commentLine,
+          MonacoAction.indentLines,
+          MonacoAction.outdentLines,
+        ];
+        for (final id in ids) {
+          await bundle.controller.executeAction(id);
+        }
 
         final joined = bundle.webview.executed.join('\n');
-        expect(joined.contains('editor.foldAll'), true);
-        expect(joined.contains('editor.unfoldAll'), true);
-        expect(joined.contains('editor.action.commentLine'), true);
-        expect(joined.contains('editor.action.indentLines'), true);
-        expect(joined.contains('editor.action.outdentLines'), true);
+        for (final id in ids) {
+          expect(joined.contains(id), true, reason: 'missing $id');
+        }
       });
 
       test('command failure envelope throws MonacoJavaScriptException',

@@ -24,8 +24,8 @@ A Flutter plugin for integrating the Monaco Editor (VS Code's editor) into Flutt
 - 🔍 **Find & Replace** - Full programmatic find/replace with regex support
 - 🎭 **Decorations & Markers** - Add highlights, errors, warnings to your code
 - 📡 **Event Streams** - Listen to content changes, selection, focus events
-- 🎨 **Themeable Chrome** - Customize loading, error, and status-bar UI
-- 🔁 **Migration Helpers** - Fold, indent, comment, and wrap helpers for app-level editor flows
+- 🎨 **Themeable Chrome** - Customize loading, error, and status-bar UI via `MonacoEditorTheme`
+- 🧰 **Typed Actions** - `MonacoAction` constants cover Monaco's full command surface (fold, indent, comment, format, find, and more)
 
 > **⚠️ Platform Support:** Currently supports **Android**, **iOS**, **macOS**, **Windows**, and **Web**. Linux is **not supported** at this time.
 
@@ -142,17 +142,18 @@ MonacoEditorTheme(
 
 ### 4. Wire toolbar buttons through the controller
 
-Common editor toolbar commands have ready-made wrappers via the `MonacoControllerMigrationActions` extension (imported with the public barrel):
+Dispatch any Monaco command via `executeAction` with a typed `MonacoAction` constant:
 
 ```dart
-await controller.foldAll();
-await controller.unfoldAll();
-await controller.toggleLineComment();
-await controller.indentLines();
-await controller.outdentLines();
+await controller.executeAction(MonacoAction.foldAll);
+await controller.executeAction(MonacoAction.unfoldAll);
+await controller.executeAction(MonacoAction.commentLine);
+await controller.executeAction(MonacoAction.indentLines);
+await controller.executeAction(MonacoAction.outdentLines);
+await controller.executeAction(MonacoAction.formatDocument);
 ```
 
-For any Monaco command not covered, call `controller.executeAction(MonacoAction.formatDocument)` (or pass any raw command id).
+`MonacoAction` exposes the full set of Monaco's built-in command ids as autocomplete-friendly constants. For commands not enumerated (e.g. custom actions registered via Monaco's `editor.addCommand`), pass the raw id string to `executeAction` instead.
 
 ### 5. Backgrounds
 
