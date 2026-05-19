@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_monaco/src/platform/platform_webview.dart';
@@ -52,6 +53,9 @@ class FakePlatformWebViewController implements PlatformWebViewController {
 
   /// Matchers for scripts that should throw errors.
   final List<ScriptMatcher> _throwMatchers = [];
+
+  /// Per-method `flutterMonacoInvoke` outcomes (FIFO when stacked).
+  final List<_CommandInjection> _commandInjections = [];
 
   /// Loaded file paths.
   final List<String> loadedFiles = [];
@@ -182,6 +186,58 @@ class FakePlatformWebViewController implements PlatformWebViewController {
     _throwMatchers.clear();
   }
 
+  /// Registers a success envelope outcome for a `flutterMonacoInvoke(...)`
+  /// call whose method name matches [methodMatch].
+  ///
+  /// Use this when a test needs a specific return [value] (or
+  /// `isUndefined: true`) from a converted command method. By default the
+  /// fake auto-responds with a `null`/undefined success envelope to any
+  /// `flutterMonacoInvoke` script, so most tests only need explicit
+  /// injections for non-default values.
+  ///
+  /// Outcomes are consumed FIFO within a single test - the first matching
+  /// injection is removed after it fires.
+  void injectCommandSuccess(
+    String methodMatch, {
+    Object? value,
+    bool isUndefined = false,
+  }) {
+    _commandInjections.add(
+      _CommandInjection.success(
+        methodMatch: methodMatch,
+        value: value,
+        isUndefined: isUndefined,
+      ),
+    );
+  }
+
+  /// Registers a failure envelope outcome for a `flutterMonacoInvoke(...)`
+  /// call whose method name matches [methodMatch].
+  ///
+  /// The Dart side decodes this as a `MonacoJavaScriptException` with the
+  /// supplied [message], [name], and [stack] fields. Use this to assert
+  /// failure propagation from the JS bridge into Dart command methods.
+  void injectCommandFailure(
+    String methodMatch, {
+    required String message,
+    String name = 'Error',
+    String? stack,
+  }) {
+    _commandInjections.add(
+      _CommandInjection.failure(
+        methodMatch: methodMatch,
+        name: name,
+        message: message,
+        stack: stack,
+      ),
+    );
+  }
+
+  /// Clears all command-invoke injections.
+  void clearCommandInjections() {
+    _commandInjections.clear();
+  }
+
   /// Emits a message to a registered channel.
   ///
   /// Throws if the channel is not registered.
@@ -211,6 +267,7 @@ class FakePlatformWebViewController implements PlatformWebViewController {
     executed.clear();
     _resultsQueue.clear();
     _throwMatchers.clear();
+    _commandInjections.clear();
     _channels.clear();
     resultResolver = null;
     initialized = false;
@@ -246,8 +303,107 @@ class FakePlatformWebViewController implements PlatformWebViewController {
       return queued.removeFirst();
     }
 
-    // Fall back to resolver
+    // flutterMonacoInvoke dispatcher: match per-method injections, then
+    // fall back to a default success envelope so converted commands return
+    // a usable result without per-test setup.
+    if (_isInvokeScript(script)) {
+      for (var i = 0; i < _commandInjections.length; i++) {
+        final injection = _commandInjections[i];
+        if (script.contains('"${injection.methodMatch}"')) {
+          _commandInjections.removeAt(i);
+          return injection.toEnvelopeJson();
+        }
+      }
+
+      // Defer to resolver before applying the default. Tests that install a
+      // resolver for invoke scripts can still override the default.
+      final resolverResult = resultResolver?.call(script);
+      if (resolverResult != null) return resolverResult;
+
+      return _defaultInvokeSuccessEnvelope;
+    }
+
+    // Fall back to resolver for non-invoke scripts.
     return resultResolver?.call(script);
+  }
+
+  bool _isInvokeScript(String script) {
+    return script.contains('window.flutterMonacoInvoke(');
+  }
+
+  static final String _defaultInvokeSuccessEnvelope = jsonEncode({
+    '__flutterMonacoEval': true,
+    'ok': true,
+    'isUndefined': true,
+    'value': null,
+  });
+}
+
+class _CommandInjection {
+  _CommandInjection._({
+    required this.methodMatch,
+    required this.ok,
+    this.value,
+    this.isUndefined = false,
+    this.errorName,
+    this.errorMessage,
+    this.errorStack,
+  });
+
+  factory _CommandInjection.success({
+    required String methodMatch,
+    Object? value,
+    bool isUndefined = false,
+  }) {
+    return _CommandInjection._(
+      methodMatch: methodMatch,
+      ok: true,
+      value: value,
+      isUndefined: isUndefined,
+    );
+  }
+
+  factory _CommandInjection.failure({
+    required String methodMatch,
+    required String name,
+    required String message,
+    String? stack,
+  }) {
+    return _CommandInjection._(
+      methodMatch: methodMatch,
+      ok: false,
+      errorName: name,
+      errorMessage: message,
+      errorStack: stack,
+    );
+  }
+
+  final String methodMatch;
+  final bool ok;
+  final Object? value;
+  final bool isUndefined;
+  final String? errorName;
+  final String? errorMessage;
+  final String? errorStack;
+
+  String toEnvelopeJson() {
+    if (ok) {
+      return jsonEncode({
+        '__flutterMonacoEval': true,
+        'ok': true,
+        'isUndefined': isUndefined,
+        'value': isUndefined ? null : value,
+      });
+    }
+    return jsonEncode({
+      '__flutterMonacoEval': true,
+      'ok': false,
+      'error': {
+        'name': errorName,
+        'message': errorMessage,
+        if (errorStack != null) 'stack': errorStack,
+      },
+    });
   }
 }
 

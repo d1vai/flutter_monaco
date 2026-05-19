@@ -31,6 +31,8 @@ class MonacoController {
   static const String _jsEvalEnvelopeKey = '__flutterMonacoEval';
   static const String _jsEvalValueKey = 'value';
   static const String _jsEvalUndefinedKey = 'isUndefined';
+  static const String _jsEvalOkKey = 'ok';
+  static const String _jsEvalErrorKey = 'error';
   static const _jsUndefined = _JavaScriptUndefinedValue();
 
   final MonacoBridge _bridge;
@@ -830,6 +832,80 @@ class MonacoController {
     return envelope.containsKey(_jsEvalValueKey)
         ? envelope[_jsEvalValueKey]
         : null;
+  }
+
+  /// Decodes a raw `runJavaScriptReturningResult` payload into the
+  /// `flutterMonacoInvoke` envelope shape, applying the same triple-decode
+  /// loop the evaluation helper uses.
+  ///
+  /// Returns the parsed envelope map, or `null` if the payload could not be
+  /// resolved to one. Callers treat a missing envelope as a bridge failure.
+  Map<String, dynamic>? _decodeInvokeEnvelope(Object? raw) {
+    Object? current = raw;
+
+    for (var i = 0; i < 3; i++) {
+      if (current is! String) break;
+      final trimmed = current.trim();
+      if (trimmed.isEmpty) return null;
+      try {
+        current = jsonDecode(trimmed);
+      } catch (_) {
+        break;
+      }
+    }
+
+    final envelope = tryConvertToMap<String, dynamic>(current);
+    if (envelope == null || envelope[_jsEvalEnvelopeKey] != true) {
+      return null;
+    }
+    return envelope;
+  }
+
+  /// Invokes a typed Monaco bridge command and returns the helper's value.
+  ///
+  /// The JavaScript side dispatches the call through `window.flutterMonacoInvoke`
+  /// which wraps the helper in a try/catch and returns a result envelope.
+  /// Success envelopes (`ok: true`) yield the helper's value (or `null` when
+  /// the helper returned `undefined`). Failure envelopes (`ok: false`) raise
+  /// [MonacoJavaScriptException] tagged with [method] so callers can react to
+  /// or rethrow the failure.
+  ///
+  /// This is the canonical path for mutating commands. Read methods with
+  /// documented fallbacks should catch [MonacoJavaScriptException] at the
+  /// Dart layer and return their default value to preserve the public API
+  /// contract.
+  // ignore: unused_element
+  Future<Object?> _invokeMonacoCommand(
+    String method,
+    List<Object?> args,
+  ) async {
+    await _ensureReady();
+
+    final script =
+        'JSON.stringify(window.flutterMonacoInvoke(${jsonEncode(method)}, ${jsonEncode(args)}))';
+    final raw = await _webViewController.runJavaScriptReturningResult(script);
+    final envelope = _decodeInvokeEnvelope(raw);
+
+    if (envelope == null) {
+      throw MonacoJavaScriptException(
+        operation: method,
+        message: 'Invalid Monaco bridge envelope: $raw',
+        details: raw,
+      );
+    }
+
+    if (envelope[_jsEvalOkKey] == true) {
+      if (envelope[_jsEvalUndefinedKey] == true) return null;
+      return envelope.containsKey(_jsEvalValueKey)
+          ? envelope[_jsEvalValueKey]
+          : null;
+    }
+
+    final error = tryConvertToMap<String, dynamic>(envelope[_jsEvalErrorKey]);
+    throw MonacoJavaScriptException.fromJson(
+      error ?? <String, dynamic>{'message': 'Unknown Monaco bridge error'},
+      operation: method,
+    );
   }
 
   // --- CONTENT AND SELECTION ---

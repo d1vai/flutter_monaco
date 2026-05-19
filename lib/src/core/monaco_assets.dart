@@ -724,6 +724,63 @@ class MonacoAssets {
                   }
                 };
 
+                // Strict accessors used by the new flutterMonacoInvoke envelope.
+                // Helpers that depend on the editor/model should call these so
+                // missing-state errors propagate to Dart instead of being
+                // silently swallowed.
+                const requireEditor = () => {
+                  const ed = E();
+                  if (!ed) {
+                    throw new Error('Monaco editor is not ready.');
+                  }
+                  return ed;
+                };
+                const requireModel = () => {
+                  const ed = requireEditor();
+                  const model = ed.getModel ? ed.getModel() : null;
+                  if (!model) {
+                    throw new Error('Monaco editor has no active model.');
+                  }
+                  return model;
+                };
+
+                // Bridge dispatcher with a result envelope.
+                //
+                // Dart-side _invokeMonacoCommand calls this so that any
+                // JavaScript error inside a flutterMonaco helper is captured
+                // as a structured failure instead of crossing the WebView
+                // boundary as an uncaught exception.
+                //
+                // Success: { __flutterMonacoEval: true, ok: true, isUndefined, value }
+                // Failure: { __flutterMonacoEval: true, ok: false, error: { name, message, stack } }
+                window.flutterMonacoInvoke = (method, args) => {
+                  try {
+                    const api = window.flutterMonaco;
+                    const fn = api && api[method];
+                    if (typeof fn !== 'function') {
+                      throw new Error('Unknown flutterMonaco method: ' + method);
+                    }
+                    const value = fn.apply(api, Array.isArray(args) ? args : []);
+                    return {
+                      __flutterMonacoEval: true,
+                      ok: true,
+                      isUndefined: typeof value === 'undefined',
+                      value: typeof value === 'undefined' ? null : value,
+                    };
+                  } catch (e) {
+                    console.error('[flutterMonaco] invoke failed:', method, e);
+                    return {
+                      __flutterMonacoEval: true,
+                      ok: false,
+                      error: {
+                        name: e && e.name ? String(e.name) : 'Error',
+                        message: e && e.message ? String(e.message) : String(e),
+                        stack: e && e.stack ? String(e.stack) : null,
+                      },
+                    };
+                  }
+                };
+
                 window.flutterMonaco = {
 
                   // Basic editor operations
