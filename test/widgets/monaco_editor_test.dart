@@ -1044,6 +1044,36 @@ void main() {
         expect(icon.color, Colors.purple);
       });
 
+      testWidgets('MonacoEditorTheme composes nested overrides',
+          (tester) async {
+        MonacoEditorThemeData? resolvedTheme;
+
+        await tester.pumpWidget(MaterialApp(
+          home: MonacoEditorTheme(
+            data: const MonacoEditorThemeData(
+              loadingIndicatorColor: Colors.orange,
+              errorIconColor: Colors.purple,
+            ),
+            child: MonacoEditorTheme(
+              data: const MonacoEditorThemeData(
+                statusBarBackgroundColor: Colors.black,
+              ),
+              child: Builder(
+                builder: (context) {
+                  resolvedTheme = MonacoEditorTheme.of(context);
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          ),
+        ));
+
+        expect(resolvedTheme, isNotNull);
+        expect(resolvedTheme!.loadingIndicatorColor, Colors.orange);
+        expect(resolvedTheme!.errorIconColor, Colors.purple);
+        expect(resolvedTheme!.statusBarBackgroundColor, Colors.black);
+      });
+
       testWidgets(
           'MonacoEditorTheme propagates into dialog routes via captureAll',
           (tester) async {

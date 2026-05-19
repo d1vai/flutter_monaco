@@ -22,17 +22,25 @@ import 'package:flutter/material.dart';
 /// ```
 class MonacoEditorTheme extends InheritedTheme {
   /// Creates a theme override for descendant [MonacoEditor] chrome.
-  const MonacoEditorTheme({
+  MonacoEditorTheme({
     super.key,
     required this.data,
+    required Widget child,
+  })  : _isResolved = false,
+        super(child: _MonacoEditorThemeResolver(child: child));
+
+  const MonacoEditorTheme._resolved({
+    required this.data,
     required super.child,
-  });
+  }) : _isResolved = true;
 
   /// The chrome theme applied to descendants.
   final MonacoEditorThemeData data;
 
-  /// Returns the nearest ancestor [MonacoEditorThemeData] without applying any
-  /// fallback derivation. Returns `null` when no ancestor is present.
+  final bool _isResolved;
+
+  /// Returns the composed ancestor [MonacoEditorThemeData] without applying any
+  /// Material fallback derivation. Returns `null` when no ancestor is present.
   static MonacoEditorThemeData? maybeOf(BuildContext context) {
     return context
         .dependOnInheritedWidgetOfExactType<MonacoEditorTheme>()
@@ -52,12 +60,44 @@ class MonacoEditorTheme extends InheritedTheme {
 
   @override
   bool updateShouldNotify(MonacoEditorTheme oldWidget) {
-    return data != oldWidget.data;
+    return data != oldWidget.data || _isResolved != oldWidget._isResolved;
   }
 
   @override
   Widget wrap(BuildContext context, Widget child) {
-    return MonacoEditorTheme(data: data, child: child);
+    return MonacoEditorTheme._resolved(data: data, child: child);
+  }
+
+  static MonacoEditorThemeData _resolveOverrides(BuildContext context) {
+    final themes = <MonacoEditorTheme>[];
+    context.visitAncestorElements((element) {
+      if (element is InheritedElement && element.widget is MonacoEditorTheme) {
+        themes.add(
+          context.dependOnInheritedElement(element) as MonacoEditorTheme,
+        );
+      }
+      return true;
+    });
+
+    var resolved = const MonacoEditorThemeData();
+    for (final theme in themes.reversed) {
+      resolved = resolved.merge(theme.data);
+    }
+    return resolved;
+  }
+}
+
+class _MonacoEditorThemeResolver extends StatelessWidget {
+  const _MonacoEditorThemeResolver({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return MonacoEditorTheme._resolved(
+      data: MonacoEditorTheme._resolveOverrides(context),
+      child: child,
+    );
   }
 }
 
