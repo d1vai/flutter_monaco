@@ -617,21 +617,6 @@ class MonacoController {
   /// Open replace dialog
   Future<void> replace() => executeAction(MonacoAction.startFindReplaceAction);
 
-  /// Fold all foldable regions in the current model.
-  Future<void> foldAll() => executeAction(MonacoAction.foldAll);
-
-  /// Unfold all foldable regions in the current model.
-  Future<void> unfoldAll() => executeAction(MonacoAction.unfoldAll);
-
-  /// Toggle line comments on the current selection.
-  Future<void> toggleLineComment() => executeAction(MonacoAction.commentLine);
-
-  /// Indent the current selection or active line.
-  Future<void> indentLines() => executeAction(MonacoAction.indentLines);
-
-  /// Outdent the current selection or active line.
-  Future<void> outdentLines() => executeAction(MonacoAction.outdentLines);
-
   /// Toggle word wrap
   Future<void> toggleWordWrap() => executeAction(MonacoAction.toggleWordWrap);
 
