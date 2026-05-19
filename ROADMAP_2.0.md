@@ -28,8 +28,8 @@ That workaround is the smell. The right shape is a single open type for each sur
 
 - Single typed `MonacoTheme` for built-in and custom themes (drop `themeId`).
 - Single typed `MonacoAction` for built-in and custom actions (no `executeActionById`).
-- Match the repo convention — freezed models for typed value objects.
-- Unlock Dart 3.10+ dot shorthand on both surfaces.
+- Match the repo convention - freezed models for typed value objects.
+- Unblock dot shorthand for users on Dart 3.10+ (without raising the package's minimum SDK).
 
 ## Non-goals
 
@@ -199,9 +199,8 @@ String get effectiveThemeId => ...; // removed
 | `EditorOptions(theme: ..., themeId: 'app-dark')` | `EditorOptions(theme: MonacoTheme('app-dark'))` | Replace `themeId:` with `theme: MonacoTheme(...)` |
 | `EditorOptions.themeId`, `effectiveThemeId` | (removed) | Use `theme.id` |
 | `MonacoController.setThemeById(String)` | `setTheme(MonacoTheme)` | Wrap raw strings: `setTheme(MonacoTheme(id))` |
-| `MonacoControllerMigrationActions` extension | (removed - dot shorthand covers it) | `controller.executeAction(.foldAll)` |
+| `MonacoControllerMigrationActions` extension | (removed - dot shorthand covers it on Dart 3.10+, full names work everywhere) | `controller.executeAction(MonacoAction.foldAll)` or `.foldAll` on 3.10+ |
 | Optional args type: `dynamic` | Optional args type: `Object?` | Most callers unaffected; explicit `dynamic` users may need casts |
-| Min Dart SDK: `>=3.0.0` | Min Dart SDK: `>=3.10.0` (dot shorthand) | Bump SDK constraint |
 
 ## Migration guide for users
 
@@ -265,13 +264,19 @@ await controller.executeAction(MonacoAction(prefs.getString('action')!));
 EditorOptions(theme: MonacoTheme(prefs.getString('theme')!));
 ```
 
-### Dot shorthand (Dart 3.10+) - new in 2.0
+### Dot shorthand (optional, Dart 3.10+)
+
+Users on Dart 3.10 or newer can lean on the language's dot-shorthand syntax:
 
 ```dart
 await controller.executeAction(.foldAll);
 EditorOptions(theme: .vsDark);
 await controller.setTheme(.hcBlack);
 ```
+
+Users on older Dart releases write the full names as in 1.x. The package's
+own minimum SDK is unchanged for 2.0 - dot shorthand is a call-site
+convenience the compiler enables when available, not a package requirement.
 
 ## Implementation plan
 
@@ -315,15 +320,15 @@ Each phase = one atomic commit. Run `flutter analyze` + `flutter test` before co
 - Remove export from `lib/flutter_monaco.dart`.
 - Remove README reference.
 
-### Phase 6: SDK constraint bump
+### Phase 6: Keep existing SDK constraint
 
-- `pubspec.yaml`: `sdk: ">=3.10.0 <4.0.0"`.
-- `example/pubspec.yaml`: same constraint.
+- Do not raise the package's minimum Dart SDK. Value-class `MonacoAction` and `MonacoTheme` compile fine on the current floor; dot shorthand is a call-site convenience that the compiler enables automatically for users on Dart 3.10+ without forcing the rest of the user base to upgrade.
+- `pubspec.yaml` and `example/pubspec.yaml`: unchanged.
 
 ### Phase 7: Test cleanup
 
 - `test/core/monaco_actions_test.dart`: drop regex-based source scraping in favor of iterating `MonacoAction.values`.
-- New tests: `MonacoAction.fromId` (known + unknown), `MonacoTheme.fromId`, custom-id construction, dot shorthand compilation.
+- New tests: `MonacoAction.fromId` (known + unknown), `MonacoTheme.fromId`, custom-id construction. Skip dot-shorthand compilation tests - they require running under Dart 3.10+ and the syntax is user-facing convenience, not part of the package's own API surface.
 - Update `EditorOptions.fromJson` tests for single-field design (no more themeId vs theme split).
 
 ### Phase 8: Documentation
@@ -375,9 +380,8 @@ Before tagging 2.0.0:
 - [ ] `MonacoTheme(id)` round-trips through `EditorOptions.fromJson` for unknown ids.
 - [ ] `MonacoAction.fromId('known')` returns the matching value; `'unknown'` returns null.
 - [ ] `MonacoTheme.fromId('known')` returns the matching value; `'unknown'` returns null.
-- [ ] Dot shorthand compiles: `controller.executeAction(.foldAll)` and `EditorOptions(theme: .vsDark)` both pass analysis.
-- [ ] `pubspec.yaml` + `example/pubspec.yaml` SDK constraints bumped to `>=3.10.0`.
-- [ ] README Quick Start and migration section show 2.0 idioms.
+- [ ] `pubspec.yaml` + `example/pubspec.yaml` SDK constraints unchanged (dot shorthand is opportunistic, not required).
+- [ ] README Quick Start and migration section show 2.0 idioms (with a sidebar noting dot shorthand requires Dart 3.10+).
 - [ ] CHANGELOG 2.0.0 has Breaking + Migration sections with the migration table.
 - [ ] `flutter analyze` clean; `flutter test` all pass; `dart pub publish --dry-run` reports 0 warnings.
 

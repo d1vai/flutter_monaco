@@ -9,7 +9,7 @@ Better theming, typed Monaco theme registration, and a stricter JS bridge contra
 
 ### Added
 - **Themable chrome.** `MonacoEditorTheme` (an `InheritedTheme`) and `MonacoEditorThemeData` style the built-in loading, error, and status-bar widgets. Nested themes compose; missing values fall back to the surrounding Material theme.
-- **Typed Monaco themes.** `MonacoController.defineTheme(MonacoThemeDefinition)` registers custom syntax themes; `defineThemeFromJson(id, data)` accepts raw Monaco theme JSON. `MonacoThemeDefinition`/`MonacoThemeRule` round-trip via `toJson()`/`fromJson()` for app-level persistence.
+- **Typed Monaco themes.** `MonacoController.defineTheme(MonacoThemeDefinition)` registers custom syntax themes; `defineThemeFromJson(id, data)` accepts raw Monaco theme JSON. `MonacoThemeDefinition`/`MonacoThemeRule` round-trip via `toJson()`/`fromJson()` for app-level persistence, and `MonacoThemeDefinition.fromMonacoThemeData(id, data)` loads third-party theme files that don't carry a registration id.
 - **Theme-id selection.** `EditorOptions.themeId` overrides the built-in `theme` enum and `MonacoController.setThemeById(id)` switches themes by raw id - useful for persisting user theme choices.
 - **`setHostPageBackgroundColor(color)`.** Recolors Monaco's HTML host page; more reliable than the native WebView background on macOS.
 - **`MonacoJavaScriptException`.** Typed errors from the JS bridge with `operation`, `name`, `message`, `stack`, and raw `details`.

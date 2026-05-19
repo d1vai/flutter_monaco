@@ -245,6 +245,35 @@ void main() {
         expect(restored, equals(original));
       });
 
+      test('MonacoThemeRule.fromJson accepts empty token as default selector',
+          () {
+        final rule = MonacoThemeRule.fromJson(const {
+          'token': '',
+          'foreground': 'D4D4D4',
+        });
+        expect(rule.token, isEmpty);
+        expect(rule.foreground, 'D4D4D4');
+      });
+
+      test('MonacoThemeDefinition.fromMonacoThemeData attaches the id', () {
+        final restored = MonacoThemeDefinition.fromMonacoThemeData(
+          'third-party-dark',
+          const {
+            'base': 'vs-dark',
+            'inherit': true,
+            'rules': [
+              {'token': 'comment', 'foreground': '6A9955'},
+            ],
+            'colors': {'editor.background': '#1E1E1E'},
+          },
+        );
+
+        expect(restored.id, 'third-party-dark');
+        expect(restored.base, MonacoTheme.vsDark);
+        expect(restored.rules.single.token, 'comment');
+        expect(restored.colors['editor.background'], '#1E1E1E');
+      });
+
       test('EditorOptions.effectiveThemeId prefers themeId override', () {
         const builtIn =
             EditorOptions(theme: MonacoTheme.vs, themeId: 'custom-dark');

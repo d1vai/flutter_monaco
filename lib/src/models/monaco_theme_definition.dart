@@ -39,8 +39,11 @@ sealed class MonacoThemeDefinition with _$MonacoThemeDefinition {
 
   const MonacoThemeDefinition._();
 
-  /// Creates a definition from persisted JSON, accepting both the [toJson]
-  /// shape (with `id`) and raw Monaco theme data.
+  /// Creates a definition from JSON produced by [toJson].
+  ///
+  /// Requires a non-empty `id` field. Raw Monaco `IStandaloneThemeData`
+  /// payloads (which don't carry the registration id) should be loaded via
+  /// [MonacoThemeDefinition.fromMonacoThemeData].
   factory MonacoThemeDefinition.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
     if (id is! String || id.isEmpty) {
@@ -85,6 +88,22 @@ sealed class MonacoThemeDefinition with _$MonacoThemeDefinition {
       colors: colors,
       encodedTokensColors: encodedTokensColors,
     );
+  }
+
+  /// Creates a definition from raw Monaco `IStandaloneThemeData`.
+  ///
+  /// Use this when loading theme data that doesn't carry a registration id
+  /// (e.g. third-party `.json` files designed for direct use with
+  /// `monaco.editor.defineTheme`). The supplied [id] becomes the theme's
+  /// registration key.
+  factory MonacoThemeDefinition.fromMonacoThemeData(
+    String id,
+    Map<String, dynamic> data,
+  ) {
+    return MonacoThemeDefinition.fromJson({
+      'id': id,
+      ...data,
+    });
   }
 
   /// Serializes this theme for app persistence.
@@ -139,13 +158,17 @@ sealed class MonacoThemeRule with _$MonacoThemeRule {
   const MonacoThemeRule._();
 
   /// Creates a rule from Monaco-shaped JSON.
+  ///
+  /// Monaco accepts an empty [token] string as the default-rule selector
+  /// (applied when no more-specific rule matches), so the empty case is
+  /// allowed here too.
   factory MonacoThemeRule.fromJson(Map<String, dynamic> json) {
     final token = json['token'];
-    if (token is! String || token.isEmpty) {
+    if (token is! String) {
       throw ArgumentError.value(
         token,
         'token',
-        'MonacoThemeRule token must be a non-empty string',
+        'MonacoThemeRule token must be a string',
       );
     }
     return MonacoThemeRule(

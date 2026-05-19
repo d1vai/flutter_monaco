@@ -22,6 +22,12 @@ import 'package:flutter/material.dart';
 /// ```
 class MonacoEditorTheme extends InheritedTheme {
   /// Creates a theme override for descendant [MonacoEditor] chrome.
+  ///
+  /// This constructor cannot be `const` because the widget composes nested
+  /// ancestor themes through a `_MonacoEditorThemeResolver` wrapper whose
+  /// `child` is a runtime parameter. Call sites incur a normal allocation,
+  /// not a const lookup - acceptable for a theme widget that sits at the
+  /// top of a subtree rather than rebuilding frequently.
   MonacoEditorTheme({
     super.key,
     required this.data,

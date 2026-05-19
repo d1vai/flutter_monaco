@@ -923,6 +923,23 @@ void main() {
         expect(find.text('Failed to Initialize Editor'), findsNothing);
       });
 
+      testWidgets('native background failure does not break initialization',
+          (tester) async {
+        final bundle = await _createBundle();
+        bundle.webview.setBackgroundColorError =
+            StateError('Simulated macOS native background failure');
+
+        await tester.pumpWidget(_wrap(MonacoEditor(
+          controller: bundle.controller,
+          backgroundColor: Colors.red,
+        )));
+        await tester.pumpAndSettle();
+
+        // Native failure is best-effort; HTML host-page recolor still runs.
+        expect(find.byKey(const Key('webview')), findsOneWidget);
+        expect(find.text('Failed to Initialize Editor'), findsNothing);
+      });
+
       testWidgets('padding applied', (tester) async {
         final bundle = await _createBundle();
         await tester.pumpWidget(_wrap(MonacoEditor(

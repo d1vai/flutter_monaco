@@ -57,6 +57,18 @@ class MonacoAssets {
   /// native platforms to ensure the correct version is used.
   static const String monacoVersion = '0.54.0';
 
+  /// Cache-busting version for generated HTML and the JS bridge contract.
+  ///
+  /// Native platforms cache generated `monaco_<key>.html` files inside the
+  /// per-[monacoVersion] directory. When the bundled Monaco version doesn't
+  /// change but the generated HTML or `window.flutterMonaco` bridge shape
+  /// does, callers must include this constant in their cache key so stale
+  /// HTML from prior package versions is regenerated on first load.
+  ///
+  /// Bump this whenever [generateIndexHtml] output or the JS bridge changes
+  /// in a way Dart depends on.
+  static const int htmlGenerationVersion = 2;
+
   static Completer<void>? _initCompleter;
 
   // HTML cache to avoid regenerating the same HTML multiple times
@@ -660,9 +672,6 @@ class MonacoAssets {
               editor.onDidChangeCursorSelection(sendStats);
               sendStats();
 
-              postMessageToFlutter({ event: 'onEditorReady' });
-              console.log('[Monaco] Editor is ready and has sent the onEditorReady event.');
-              
               // Set up typed API
               (function () {
                 const E = () => window.editor;
@@ -1577,6 +1586,9 @@ class MonacoAssets {
                   };
                 })();
               })();
+
+              postMessageToFlutter({ event: 'onEditorReady' });
+              console.log('[Monaco] Editor is ready and the Flutter bridge is installed.');
             });
 
             monaco.editor.create(document.getElementById('editor-container'), {

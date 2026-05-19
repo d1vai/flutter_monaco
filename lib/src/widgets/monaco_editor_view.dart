@@ -319,19 +319,22 @@ class _MonacoEditorState extends State<MonacoEditor> {
         return;
       }
 
-      // Apply initial values and settings post-readiness.
+      // Apply initial values and settings post-readiness. Background is
+      // cosmetic - the widget already paints its own container behind the
+      // WebView - so a platform failure here must not abort initialization.
+      // The split exists because macOS native backgrounds are unreliable;
+      // both layers can fail independently.
       if (widget.backgroundColor != null) {
-        await _controller!.setBackgroundColor(widget.backgroundColor!);
-        // Best-effort host-page recolor in case the native WebView background
-        // isn't honored (notably macOS platform views). Failures here are
-        // tolerated so a broken bridge doesn't break bootstrap.
+        try {
+          await _controller!.setBackgroundColor(widget.backgroundColor!);
+        } catch (e) {
+          debugPrint('[MonacoEditor] setBackgroundColor failed: $e');
+        }
         try {
           await _controller!
               .setHostPageBackgroundColor(widget.backgroundColor!);
         } catch (e) {
-          debugPrint(
-            '[MonacoEditor] setHostPageBackgroundColor failed: $e',
-          );
+          debugPrint('[MonacoEditor] setHostPageBackgroundColor failed: $e');
         }
       }
       // Ensure options are up-to-date in case they changed during bootstrap

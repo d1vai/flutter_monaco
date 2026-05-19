@@ -45,6 +45,10 @@ class FakePlatformWebViewController implements PlatformWebViewController {
   /// Whether interaction is currently enabled.
   bool interactionEnabled = true;
 
+  /// When set, [setBackgroundColor] throws this error instead of recording.
+  /// Used to simulate macOS native WebView background failures.
+  Object? setBackgroundColorError;
+
   /// Queue of results to return for specific scripts.
   final Map<String, Queue<Object?>> _resultsQueue = {};
 
@@ -105,6 +109,10 @@ class FakePlatformWebViewController implements PlatformWebViewController {
   Future<void> setBackgroundColor(Color color) async {
     if (disposed) {
       throw StateError('Cannot set background color on disposed controller');
+    }
+    final error = setBackgroundColorError;
+    if (error != null) {
+      throw error;
     }
     executed.add('SET_BACKGROUND_COLOR:$color');
   }
