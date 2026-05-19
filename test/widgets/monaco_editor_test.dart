@@ -882,6 +882,21 @@ void main() {
         );
       });
 
+      testWidgets('backgroundColor failure does not break initialization',
+          (tester) async {
+        final bundle = await _createBundle();
+        bundle.webview.throwOnContains('SET_BACKGROUND_COLOR');
+
+        await tester.pumpWidget(_wrap(MonacoEditor(
+          controller: bundle.controller,
+          backgroundColor: Colors.red,
+        )));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('webview')), findsOneWidget);
+        expect(find.text('Failed to Initialize Editor'), findsNothing);
+      });
+
       testWidgets('padding applied', (tester) async {
         final bundle = await _createBundle();
         await tester.pumpWidget(_wrap(MonacoEditor(

@@ -322,8 +322,16 @@ class MonacoController {
   ///
   /// Applied immediately to the native view, even if Monaco is still loading.
   Future<void> setBackgroundColor(Color color) async {
-    // No need to wait for ready, can be set immediately on the webview controller
-    await _webViewController.setBackgroundColor(color);
+    // No need to wait for ready, can be set immediately on the webview controller.
+    // Some native platform views, notably macOS WebView implementations, do not
+    // support programmatic background updates consistently. This should never
+    // block editor initialization because the Flutter host widget already has a
+    // background color fallback.
+    try {
+      await _webViewController.setBackgroundColor(color);
+    } catch (e) {
+      debugPrint('[MonacoController] setBackgroundColor ignored: $e');
+    }
   }
 
   /// Toggles whether the editor intercepts pointer events.
