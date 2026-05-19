@@ -1,48 +1,93 @@
 import 'package:flutter/material.dart';
 
-/// Visual configuration for MonacoEditor's built-in loading, error, and
+/// Inherited styling for [MonacoEditor]'s built-in Flutter chrome.
+///
+/// Wrap a subtree in [MonacoEditorTheme] to override the look of the
+/// default loading spinner, error overlay, and status bar without replacing
+/// them via the widget-level `loadingBuilder`/`errorBuilder`/`statusBarBuilder`
+/// callbacks. Descendants resolve the theme via [MonacoEditorTheme.of].
+///
+/// This theme is intentionally separate from Monaco's own editor theme. To
+/// change Monaco token colors or the editor surface background, register a
+/// `MonacoThemeDefinition` instead.
+///
+/// ```dart
+/// MonacoEditorTheme(
+///   data: const MonacoEditorThemeData(
+///     loadingIndicatorColor: Colors.amber,
+///     statusBarBackgroundColor: Color(0xFF101010),
+///   ),
+///   child: const MonacoEditor(showStatusBar: true),
+/// )
+/// ```
+class MonacoEditorTheme extends InheritedTheme {
+  /// Creates a theme override for descendant [MonacoEditor] chrome.
+  const MonacoEditorTheme({
+    super.key,
+    required this.data,
+    required super.child,
+  });
+
+  /// The chrome theme applied to descendants.
+  final MonacoEditorThemeData data;
+
+  /// Returns the nearest ancestor [MonacoEditorThemeData] without applying any
+  /// fallback derivation. Returns `null` when no ancestor is present.
+  static MonacoEditorThemeData? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<MonacoEditorTheme>()
+        ?.data;
+  }
+
+  /// Returns the resolved chrome theme for [context].
+  ///
+  /// Values from the nearest [MonacoEditorTheme] override the fallback theme
+  /// derived from the surrounding Material [Theme]. The returned object is
+  /// always fully populated, so default chrome widgets can read it without
+  /// per-field null checks.
+  static MonacoEditorThemeData of(BuildContext context) {
+    final fallback = MonacoEditorThemeData.fallback(context);
+    return fallback.merge(maybeOf(context));
+  }
+
+  @override
+  bool updateShouldNotify(MonacoEditorTheme oldWidget) {
+    return data != oldWidget.data;
+  }
+
+  @override
+  Widget wrap(BuildContext context, Widget child) {
+    return MonacoEditorTheme(data: data, child: child);
+  }
+}
+
+/// Visual configuration for [MonacoEditor]'s built-in loading, error, and
 /// status-bar chrome.
+///
+/// All fields are nullable so that explicit overrides can be distinguished
+/// from defaults during [merge]. The defaults applied by [MonacoEditorTheme.of]
+/// come from [MonacoEditorThemeData.fallback], which derives sensible values
+/// from the surrounding Material [Theme].
 @immutable
 class MonacoEditorThemeData {
-  /// Creates theme overrides for MonacoEditor's built-in loading, error, and
-  /// status-bar chrome.
+  /// Creates theme overrides for MonacoEditor's built-in chrome.
+  ///
+  /// Any field left `null` is filled in by [MonacoEditorThemeData.fallback]
+  /// (or, when used as the right-hand side of [merge], leaves the underlying
+  /// value untouched).
   const MonacoEditorThemeData({
-    /// Color of the default loading spinner.
     this.loadingIndicatorColor,
-
-    /// Optional background behind the default loading overlay.
     this.loadingBackgroundColor,
-
-    /// Color of the default error icon.
     this.errorIconColor,
-
-    /// Text style of the default error title.
     this.errorTitleStyle,
-
-    /// Text style of the default error message.
     this.errorMessageStyle,
-
-    /// Optional background behind the default error overlay.
     this.errorBackgroundColor,
-
-    /// Button style used by the default retry button.
     this.retryButtonStyle,
-
-    /// Background color of the built-in status bar.
     this.statusBarBackgroundColor,
-
-    /// Top border color of the built-in status bar.
     this.statusBarBorderColor,
-
-    /// Text style of the built-in status bar entries.
     this.statusBarTextStyle,
-
-    /// Horizontal spacing between built-in status bar entries.
-    this.statusBarSpacing = 16,
-
-    /// Padding of the built-in status bar container.
-    this.statusBarPadding =
-        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    this.statusBarSpacing,
+    this.statusBarPadding,
   });
 
   /// Color of the default loading spinner.
@@ -76,10 +121,10 @@ class MonacoEditorThemeData {
   final TextStyle? statusBarTextStyle;
 
   /// Horizontal spacing between built-in status bar entries.
-  final double statusBarSpacing;
+  final double? statusBarSpacing;
 
   /// Padding of the built-in status bar container.
-  final EdgeInsetsGeometry statusBarPadding;
+  final EdgeInsetsGeometry? statusBarPadding;
 
   /// Returns a copy with selective overrides.
   MonacoEditorThemeData copyWith({
@@ -115,17 +160,41 @@ class MonacoEditorThemeData {
     );
   }
 
+  /// Overlays non-null fields from [other] onto this theme.
+  ///
+  /// Used by [MonacoEditorTheme.of] to merge ancestor overrides on top of the
+  /// derived Material fallback so default chrome widgets see a fully
+  /// populated theme. Returns `this` unchanged when [other] is `null`.
+  MonacoEditorThemeData merge(MonacoEditorThemeData? other) {
+    if (other == null) return this;
+    return copyWith(
+      loadingIndicatorColor: other.loadingIndicatorColor,
+      loadingBackgroundColor: other.loadingBackgroundColor,
+      errorIconColor: other.errorIconColor,
+      errorTitleStyle: other.errorTitleStyle,
+      errorMessageStyle: other.errorMessageStyle,
+      errorBackgroundColor: other.errorBackgroundColor,
+      retryButtonStyle: other.retryButtonStyle,
+      statusBarBackgroundColor: other.statusBarBackgroundColor,
+      statusBarBorderColor: other.statusBarBorderColor,
+      statusBarTextStyle: other.statusBarTextStyle,
+      statusBarSpacing: other.statusBarSpacing,
+      statusBarPadding: other.statusBarPadding,
+    );
+  }
+
   /// Resolves a sensible fallback theme from the current Material theme.
   static MonacoEditorThemeData fallback(BuildContext context) {
     final theme = Theme.of(context);
     return MonacoEditorThemeData(
       loadingIndicatorColor: theme.colorScheme.primary,
+      loadingBackgroundColor: Colors.transparent,
       errorIconColor: theme.colorScheme.error,
       errorTitleStyle: theme.textTheme.titleMedium,
       errorMessageStyle: theme.textTheme.bodyMedium?.copyWith(
         color: theme.colorScheme.error,
       ),
-      errorBackgroundColor: theme.colorScheme.surface,
+      errorBackgroundColor: Colors.transparent,
       retryButtonStyle: ElevatedButton.styleFrom(
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
@@ -135,6 +204,45 @@ class MonacoEditorThemeData {
       statusBarBorderColor: theme.dividerColor,
       statusBarTextStyle:
           theme.textTheme.bodySmall ?? const TextStyle(fontSize: 12),
+      statusBarSpacing: 16,
+      statusBarPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is MonacoEditorThemeData &&
+        other.loadingIndicatorColor == loadingIndicatorColor &&
+        other.loadingBackgroundColor == loadingBackgroundColor &&
+        other.errorIconColor == errorIconColor &&
+        other.errorTitleStyle == errorTitleStyle &&
+        other.errorMessageStyle == errorMessageStyle &&
+        other.errorBackgroundColor == errorBackgroundColor &&
+        other.retryButtonStyle == retryButtonStyle &&
+        other.statusBarBackgroundColor == statusBarBackgroundColor &&
+        other.statusBarBorderColor == statusBarBorderColor &&
+        other.statusBarTextStyle == statusBarTextStyle &&
+        other.statusBarSpacing == statusBarSpacing &&
+        other.statusBarPadding == statusBarPadding;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      loadingIndicatorColor,
+      loadingBackgroundColor,
+      errorIconColor,
+      errorTitleStyle,
+      errorMessageStyle,
+      errorBackgroundColor,
+      retryButtonStyle,
+      statusBarBackgroundColor,
+      statusBarBorderColor,
+      statusBarTextStyle,
+      statusBarSpacing,
+      statusBarPadding,
     );
   }
 }

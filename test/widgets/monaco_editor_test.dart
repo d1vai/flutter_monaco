@@ -612,18 +612,23 @@ void main() {
         expect(find.text('Lines: 42'), findsOneWidget);
       });
 
-      testWidgets('chromeTheme customizes default status bar', (tester) async {
+      testWidgets('MonacoEditorTheme customizes default status bar',
+          (tester) async {
         final bundle = await _createBundle();
-        await tester.pumpWidget(_wrap(MonacoEditor(
-          controller: bundle.controller,
-          showStatusBar: true,
-          chromeTheme: const MonacoEditorThemeData(
-            statusBarBackgroundColor: Colors.black,
-            statusBarBorderColor: Colors.red,
-            statusBarTextStyle: TextStyle(color: Colors.green),
-            statusBarSpacing: 8,
+        await tester.pumpWidget(_wrap(
+          MonacoEditorTheme(
+            data: const MonacoEditorThemeData(
+              statusBarBackgroundColor: Colors.black,
+              statusBarBorderColor: Colors.red,
+              statusBarTextStyle: TextStyle(color: Colors.green),
+              statusBarSpacing: 8,
+            ),
+            child: MonacoEditor(
+              controller: bundle.controller,
+              showStatusBar: true,
+            ),
           ),
-        )));
+        ));
         await tester.pumpAndSettle();
 
         bundle.webview.emitToChannel(
@@ -980,15 +985,17 @@ void main() {
     });
 
     group('default chrome theming', () {
-      testWidgets('chromeTheme customizes loading UI', (tester) async {
+      testWidgets('MonacoEditorTheme customizes loading UI', (tester) async {
         final bundle = await _createBundle(ready: false);
-        await tester.pumpWidget(_wrap(MonacoEditor(
-          controller: bundle.controller,
-          chromeTheme: const MonacoEditorThemeData(
-            loadingIndicatorColor: Colors.orange,
-            loadingBackgroundColor: Colors.black,
+        await tester.pumpWidget(_wrap(
+          MonacoEditorTheme(
+            data: const MonacoEditorThemeData(
+              loadingIndicatorColor: Colors.orange,
+              loadingBackgroundColor: Colors.black,
+            ),
+            child: MonacoEditor(controller: bundle.controller),
           ),
-        )));
+        ));
 
         final progress = tester.widget<CircularProgressIndicator>(
           find.byType(CircularProgressIndicator),
@@ -996,21 +1003,79 @@ void main() {
         expect(progress.color, Colors.orange);
       });
 
-      testWidgets('chromeTheme customizes default error UI', (tester) async {
+      testWidgets('MonacoEditorTheme customizes default error UI',
+          (tester) async {
         final bundle = await _createBundle();
-        bundle.webview.throwOnContains('setValue');
+        bundle.webview.injectCommandFailure('setValue', message: 'fail');
 
-        await tester.pumpWidget(_wrap(MonacoEditor(
-          controller: bundle.controller,
-          initialValue: 'trigger',
-          chromeTheme: const MonacoEditorThemeData(
-            errorIconColor: Colors.purple,
+        await tester.pumpWidget(_wrap(
+          MonacoEditorTheme(
+            data: const MonacoEditorThemeData(
+              errorIconColor: Colors.purple,
+            ),
+            child: MonacoEditor(
+              controller: bundle.controller,
+              initialValue: 'trigger',
+            ),
           ),
-        )));
+        ));
         await tester.pump();
 
         final icon = tester.widget<Icon>(find.byIcon(Icons.error_outline));
         expect(icon.color, Colors.purple);
+      });
+
+      testWidgets(
+          'MonacoEditorTheme propagates into dialog routes via captureAll',
+          (tester) async {
+        final bundle = await _createBundle();
+        MonacoEditorThemeData? capturedTheme;
+
+        await tester.pumpWidget(MaterialApp(
+          home: MonacoEditorTheme(
+            data: const MonacoEditorThemeData(
+              loadingIndicatorColor: Colors.cyan,
+              statusBarBackgroundColor: Colors.black,
+            ),
+            child: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: Column(children: [
+                    Expanded(
+                      child: MonacoEditor(controller: bundle.controller),
+                    ),
+                    ElevatedButton(
+                      key: const Key('openDialog'),
+                      onPressed: () {
+                        showDialog<void>(
+                          context: context,
+                          builder: (dialogContext) => Builder(
+                            builder: (innerContext) {
+                              capturedTheme =
+                                  MonacoEditorTheme.of(innerContext);
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        );
+                      },
+                      child: const Text('open'),
+                    ),
+                  ]),
+                );
+              },
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('openDialog')));
+        await tester.pumpAndSettle();
+
+        // showDialog uses InheritedTheme.captureAll, which invokes our
+        // MonacoEditorTheme.wrap to carry the data across the dialog route.
+        expect(capturedTheme, isNotNull);
+        expect(capturedTheme!.loadingIndicatorColor, Colors.cyan);
+        expect(capturedTheme!.statusBarBackgroundColor, Colors.black);
       });
     });
   });

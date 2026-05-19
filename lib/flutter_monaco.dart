@@ -101,4 +101,5 @@ export 'src/widgets/monaco_focus_guard.dart' show MonacoFocusGuard;
 export 'src/widgets/monaco_overlay_boundary.dart' show MonacoOverlayBoundary;
 export 'src/widgets/monaco_route_observer.dart' show MonacoRouteObserver;
 export 'src/widgets/monaco_scaffold.dart' show MonacoScaffold;
-export 'src/widgets/monaco_editor_theme.dart' show MonacoEditorThemeData;
+export 'src/widgets/monaco_editor_theme.dart'
+    show MonacoEditorTheme, MonacoEditorThemeData;
