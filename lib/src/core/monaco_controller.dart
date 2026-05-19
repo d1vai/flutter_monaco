@@ -262,9 +262,7 @@ class MonacoController {
         return; // A newer language was queued, skip this one
       }
     }
-    await _webViewController.runJavaScript(
-      'flutterMonaco.setLanguage(${jsonEncode(language.id)})',
-    );
+    await _invokeMonacoCommand('setLanguage', [language.id]);
   }
 
   /// Configures Monaco's built-in JSON diagnostics and schema validation.
@@ -293,20 +291,14 @@ class MonacoController {
   ///
   /// This also supports custom themes registered with [defineTheme].
   Future<void> setThemeById(String themeId) async {
-    await _ensureReady();
-    await _webViewController.runJavaScript(
-      'flutterMonaco.setTheme(${jsonEncode(themeId)})',
-    );
+    await _invokeMonacoCommand('setTheme', [themeId]);
   }
 
   /// Registers or replaces a Monaco theme definition.
   ///
   /// [data] should follow Monaco's `IStandaloneThemeData` shape.
   Future<void> defineTheme(String name, Map<String, dynamic> data) async {
-    await _ensureReady();
-    await _webViewController.runJavaScript(
-      'flutterMonaco.defineTheme(${jsonEncode(name)}, ${jsonEncode(data)})',
-    );
+    await _invokeMonacoCommand('defineTheme', [name, data]);
   }
 
   /// Best-effort custom theme registration that degrades cleanly on native WebViews.
@@ -411,10 +403,7 @@ class MonacoController {
   ///
   /// Only the fields present in [options] will be updated; others remain unchanged.
   Future<void> updateOptions(EditorOptions options) async {
-    await _ensureReady();
-    await _webViewController.runJavaScript(
-      'flutterMonaco.updateOptions(${jsonEncode(options.toMonacoOptions())})',
-    );
+    await _invokeMonacoCommand('updateOptions', [options.toMonacoOptions()]);
   }
 
   /// Registers a dynamic completion provider for the given [languages].
@@ -515,10 +504,7 @@ class MonacoController {
 
   /// Execute an editor action
   Future<void> executeAction(String actionId, [dynamic args]) async {
-    await _ensureReady();
-    await _webViewController.runJavaScript(
-      'flutterMonaco.executeAction(${jsonEncode(actionId)}, ${jsonEncode(args)})',
-    );
+    await _invokeMonacoCommand('executeAction', [actionId, args]);
   }
 
   /// Requests focus for the editor widget.
@@ -874,7 +860,6 @@ class MonacoController {
   /// documented fallbacks should catch [MonacoJavaScriptException] at the
   /// Dart layer and return their default value to preserve the public API
   /// contract.
-  // ignore: unused_element
   Future<Object?> _invokeMonacoCommand(
     String method,
     List<Object?> args,
@@ -914,12 +899,15 @@ class MonacoController {
   ///
   /// Returns [defaultValue] if the operation fails or returns null.
   Future<String> getValue({String defaultValue = ''}) async {
-    return await _executeJavaScript<String>(
-          'flutterMonaco.getValue()',
-          defaultValue: defaultValue,
-          jsonAware: false, // Don't decode - this is plain text content
-        ) ??
-        defaultValue;
+    try {
+      final result = await _invokeMonacoCommand('getValue', []);
+      return result is String ? result : defaultValue;
+    } catch (_) {
+      // Documented fallback contract: reads with defaultValue never propagate
+      // bridge errors. Use [evaluateJavaScript] or [_invokeMonacoCommand]
+      // directly if strict failure visibility is required.
+      return defaultValue;
+    }
   }
 
   /// Replaces the entire content of the editor.
@@ -938,9 +926,7 @@ class MonacoController {
         return; // A newer value was queued, skip this one
       }
     }
-    await _webViewController.runJavaScript(
-      'flutterMonaco.setValue(${jsonEncode(value)})',
-    );
+    await _invokeMonacoCommand('setValue', [value]);
   }
 
   /// Retrieves the current primary selection range.
@@ -955,10 +941,7 @@ class MonacoController {
 
   /// Selects the specified [range] in the editor.
   Future<void> setSelection(Range range) async {
-    await _ensureReady();
-    await _webViewController.runJavaScript(
-      'flutterMonaco.setSelection(${jsonEncode(range.toJson())})',
-    );
+    await _invokeMonacoCommand('setSelection', [range.toJson()]);
   }
 
   // --- NAVIGATION ---
@@ -1004,11 +987,14 @@ class MonacoController {
 
   /// Get the total line count with enhanced conversion
   Future<int> getLineCount({int defaultValue = 0}) async {
-    return await _executeJavaScript<int>(
-          'flutterMonaco.getLineCount()',
-          defaultValue: defaultValue,
-        ) ??
-        defaultValue;
+    try {
+      final result = await _invokeMonacoCommand('getLineCount', []);
+      if (result is int) return result;
+      if (result is num) return result.toInt();
+      return defaultValue;
+    } catch (_) {
+      return defaultValue;
+    }
   }
 
   /// Get the content of a specific line with validation
@@ -1017,12 +1003,12 @@ class MonacoController {
     final lineCount = await getLineCount();
     if (line < 1 || line > lineCount) return defaultValue;
 
-    return await _executeJavaScript<String>(
-          'flutterMonaco.getLineContent($line)',
-          defaultValue: defaultValue,
-          jsonAware: false, // Don't decode - this is plain text content
-        ) ??
-        defaultValue;
+    try {
+      final result = await _invokeMonacoCommand('getLineContent', [line]);
+      return result is String ? result : defaultValue;
+    } catch (_) {
+      return defaultValue;
+    }
   }
 
   /// Get multiple lines content at once
@@ -1039,13 +1025,12 @@ class MonacoController {
         results.add(lineDefaultValue);
         continue;
       }
-      final content = await _executeJavaScript<String>(
-            'flutterMonaco.getLineContent($line)',
-            defaultValue: lineDefaultValue,
-            jsonAware: false,
-          ) ??
-          lineDefaultValue;
-      results.add(content);
+      try {
+        final result = await _invokeMonacoCommand('getLineContent', [line]);
+        results.add(result is String ? result : lineDefaultValue);
+      } catch (_) {
+        results.add(lineDefaultValue);
+      }
     }
     return results;
   }
@@ -1057,10 +1042,9 @@ class MonacoController {
   /// This is the most efficient way to make multiple changes at once.
   Future<void> applyEdits(List<EditOperation> edits) async {
     if (edits.isEmpty) return;
-    await _ensureReady();
-
-    await _webViewController.runJavaScript(
-      'flutterMonaco.applyEdits(${jsonEncode(edits.map((e) => e.toJson()).toList())})',
+    await _invokeMonacoCommand(
+      'applyEdits',
+      [edits.map((e) => e.toJson()).toList()],
     );
   }
 
@@ -1097,13 +1081,13 @@ class MonacoController {
   Future<List<String>> setDecorations(
     List<DecorationOptions> decorations,
   ) async {
-    // Don't use JSON.stringify - return array directly
-    final ids = await _executeJavaScript<List<dynamic>>(
-      'flutterMonaco.deltaDecorations(${jsonEncode(_decorationIds)}, ${jsonEncode(decorations.map((d) => d.toJson()).toList())})',
-      defaultValue: const [],
+    final raw = await _invokeMonacoCommand(
+      'deltaDecorations',
+      [_decorationIds, decorations.map((d) => d.toJson()).toList()],
     );
+    final ids = raw is List ? raw : const [];
 
-    return _decorationIds = (ids ?? const [])
+    return _decorationIds = ids
         .map((e) => e.toString())
         .where((s) => s.isNotEmpty)
         .toList();
@@ -1161,9 +1145,9 @@ class MonacoController {
     List<MarkerData> markers, {
     String owner = 'flutter',
   }) async {
-    await _ensureReady();
-    await _webViewController.runJavaScript(
-      'flutterMonaco.setModelMarkers(${jsonEncode(owner)}, ${jsonEncode(markers.map((m) => m.toJson()).toList())})',
+    await _invokeMonacoCommand(
+      'setModelMarkers',
+      [owner, markers.map((m) => m.toJson()).toList()],
     );
   }
 
@@ -1351,9 +1335,9 @@ class MonacoController {
 
   /// Set cursor position
   Future<void> setCursorPosition(Position position) async {
-    await _ensureReady();
-    await _webViewController.runJavaScript(
-      'flutterMonaco.setCursorPosition(${position.line}, ${position.column})',
+    await _invokeMonacoCommand(
+      'setCursorPosition',
+      [position.line, position.column],
     );
   }
 

@@ -715,14 +715,6 @@ class MonacoAssets {
                 // Typed helpers Flutter will call
                 const escapeRegExp = (value) =>
                   (value ?? '').replace(/$jsEscapePattern/g, '\\\\\$&');
-                const safe = (fn, fallback = true) => {
-                  try {
-                    return fn();
-                  } catch (e) {
-                    console.error('[flutterMonaco] helper failed:', e);
-                    return fallback;
-                  }
-                };
 
                 // Strict accessors used by the new flutterMonacoInvoke envelope.
                 // Helpers that depend on the editor/model should call these so
@@ -825,60 +817,61 @@ class MonacoAssets {
                       setTimeout(() => requestAnimationFrame(attempt), 0);
                     } catch (_) {}
                   },
-                  getValue: () => safe(() => E().getValue(), ''),
-                  setValue: (v) => safe(() => {
-                    const ed = E();
-                    if (!ed) return false;
-                    ed.setValue(v || '');
+                  getValue: () => requireEditor().getValue(),
+                  setValue: (v) => {
+                    requireEditor().setValue(v || '');
                     return true;
-                  }),
-                  defineTheme: (name, data) => safe(() => {
-                    if (!window.monaco || !monaco.editor || !name) return false;
+                  },
+                  defineTheme: (name, data) => {
+                    if (!window.monaco || !monaco.editor) {
+                      throw new Error('Monaco editor API is not available.');
+                    }
+                    if (!name || typeof name !== 'string') {
+                      throw new Error('Theme name must be a non-empty string.');
+                    }
                     monaco.editor.defineTheme(name, data || {});
                     return true;
-                  }),
-                  setPageBackground: (color) => safe(() => {
-                    if (!color) return false;
+                  },
+                  setPageBackground: (color) => {
+                    if (!color) {
+                      throw new Error('Background color is required.');
+                    }
                     const value = String(color);
-                    try { document.documentElement.style.backgroundColor = value; } catch (_) {}
-                    try { document.body.style.backgroundColor = value; } catch (_) {}
-                    try {
-                      const container = document.getElementById('editor-container');
-                      if (container) {
-                        container.style.backgroundColor = value;
-                      }
-                    } catch (_) {}
+                    document.documentElement.style.backgroundColor = value;
+                    document.body.style.backgroundColor = value;
+                    const container = document.getElementById('editor-container');
+                    if (container) container.style.backgroundColor = value;
                     return true;
-                  }),
-                  setTheme: (theme) => safe(() => {
+                  },
+                  setTheme: (theme) => {
+                    if (!theme || typeof theme !== 'string') {
+                      throw new Error('Theme id must be a non-empty string.');
+                    }
                     monaco.editor.setTheme(theme);
                     return true;
-                  }),
-                  setLanguage: (lang) => safe(() => {
-                    const ed = E();
-                    const model = ed?.getModel ? ed.getModel() : null;
-                    if (!model) return false;
-                    monaco.editor.setModelLanguage(model, lang);
+                  },
+                  setLanguage: (lang) => {
+                    monaco.editor.setModelLanguage(requireModel(), lang);
                     return true;
-                  }),
-                  updateOptions: (opts) => safe(() => {
-                    const ed = E();
-                    if (!ed) return false;
-                    ed.updateOptions(opts);
+                  },
+                  updateOptions: (opts) => {
+                    requireEditor().updateOptions(opts);
                     return true;
-                  }),
-                  executeAction: (actionId, args) => safe(() => {
-                    const ed = E();
-                    if (!ed) return false;
-                    const action = ed?.getAction ? ed.getAction(actionId) : null;
+                  },
+                  executeAction: (actionId, args) => {
+                    if (!actionId || typeof actionId !== 'string') {
+                      throw new Error('Action id must be a non-empty string.');
+                    }
+                    const ed = requireEditor();
+                    const action = ed.getAction ? ed.getAction(actionId) : null;
                     if (action && typeof action.run === 'function') {
                       action.run(args);
                       return true;
                     }
                     ed.trigger('flutter-bridge', actionId, args);
                     return true;
-                  }),
-                  
+                  },
+
                   // Selection
                   getSelection: () => {
                     const s = E().getSelection();
@@ -887,25 +880,21 @@ class MonacoAssets {
                       endLineNumber: s.endLineNumber, endColumn: s.endColumn
                     } : null;
                   },
-                  setSelection: (r) => safe(() => {
-                    const ed = E();
-                    if (!ed) return false;
-                    ed.setSelection(r);
+                  setSelection: (r) => {
+                    requireEditor().setSelection(r);
                     return true;
-                  }),
-                  
+                  },
+
                   // Cursor
                   getCursorPosition: () => {
                     const p = E().getPosition();
                     return p ? { lineNumber: p.lineNumber, column: p.column } : null;
                   },
-                  setCursorPosition: (line, column) => safe(() => {
-                    const ed = E();
-                    if (!ed) return false;
-                    ed.setPosition({ lineNumber: line, column: column });
+                  setCursorPosition: (line, column) => {
+                    requireEditor().setPosition({ lineNumber: line, column: column });
                     return true;
-                  }),
-                  
+                  },
+
                   // Navigation
                   revealLine: (ln, center) =>
                     center ? E().revealLineInCenter(ln) : E().revealLine(ln),
@@ -913,8 +902,8 @@ class MonacoAssets {
                     center ? E().revealRangeInCenter(r) : E().revealRange(r),
 
                   // Line operations
-                  getLineCount: () => safe(() => E()?.getModel?.()?.getLineCount() ?? 0, 0),
-                  getLineContent: (ln) => safe(() => E()?.getModel?.()?.getLineContent(ln) ?? '', ''),
+                  getLineCount: () => requireModel().getLineCount(),
+                  getLineContent: (ln) => requireModel().getLineContent(ln),
                   
                   // Word lookup
                   getWordAtPosition: (line, column) => {
@@ -925,19 +914,14 @@ class MonacoAssets {
                   },
 
                   // Edits
-                  applyEdits: (edits, opts) => safe(() => {
-                    const model = E()?.getModel?.();
-                    if (!model) return false;
-                    model.applyEdits(edits || [], opts || {});
+                  applyEdits: (edits, opts) => {
+                    requireModel().applyEdits(edits || [], opts || {});
                     return true;
-                  }),
+                  },
 
                   // Decorations
-                  deltaDecorations: (oldIds, newDecos) => safe(() => {
-                    const ed = E();
-                    if (!ed) return [];
-                    return ed.deltaDecorations(oldIds || [], newDecos || []);
-                  }, []),
+                  deltaDecorations: (oldIds, newDecos) =>
+                    requireEditor().deltaDecorations(oldIds || [], newDecos || []),
 
                   // JSON language diagnostics
                   setJsonDiagnosticsOptions: (diagnostics) => {
@@ -945,12 +929,10 @@ class MonacoAssets {
                   },
 
                   // Markers (diagnostics)
-                  setModelMarkers: (owner, markers) => safe(() => {
-                    const model = E()?.getModel?.();
-                    if (!model) return false;
-                    monaco.editor.setModelMarkers(model, owner || 'flutter', markers || []);
+                  setModelMarkers: (owner, markers) => {
+                    monaco.editor.setModelMarkers(requireModel(), owner || 'flutter', markers || []);
                     return true;
-                  }),
+                  },
 
                   // Find & replace (programmatic)
                   findMatches: (q, options, limit) => {

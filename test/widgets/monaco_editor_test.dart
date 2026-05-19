@@ -169,7 +169,10 @@ void main() {
         )));
         await tester.pump();
 
-        bundle.webview.assertExecuted('setValue("initial content")');
+        final setValueScripts =
+            bundle.webview.scriptsContaining('"setValue"');
+        expect(setValueScripts.length, 1);
+        expect(setValueScripts.first, contains('"initial content"'));
 
         // Update widget with different initialValue
         await tester.pumpWidget(_wrap(MonacoEditor(
@@ -178,8 +181,12 @@ void main() {
         )));
         await tester.pump();
 
-        // Should NOT set the new value
-        bundle.webview.assertNotExecuted('setValue("new content")');
+        // Should NOT set the new value (initialValue is applied only once)
+        expect(
+          bundle.webview.scriptsContaining('"setValue"').length,
+          1,
+          reason: 'initialValue must only be applied during initial bootstrap',
+        );
       });
 
       testWidgets('initialSelection applied after initialValue',
@@ -377,8 +384,8 @@ void main() {
           (tester) async {
         final bundle = await _createBundle();
         final calls = <String>[];
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'A');
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'B');
+        bundle.webview.injectCommandSuccess('getValue', value: 'A');
+        bundle.webview.injectCommandSuccess('getValue', value: 'B');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
@@ -408,7 +415,7 @@ void main() {
       testWidgets('flush event bypasses debounce', (tester) async {
         final bundle = await _createBundle();
         final calls = <String>[];
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'flushed');
+        bundle.webview.injectCommandSuccess('getValue', value: 'flushed');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
@@ -431,7 +438,7 @@ void main() {
           (tester) async {
         final bundle = await _createBundle();
         final calls = <String>[];
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'content');
+        bundle.webview.injectCommandSuccess('getValue', value: 'content');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
@@ -482,8 +489,8 @@ void main() {
         final bundle = await _createBundle();
         final calls1 = <String>[];
         final calls2 = <String>[];
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'v1');
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'v2');
+        bundle.webview.injectCommandSuccess('getValue', value: 'v1');
+        bundle.webview.injectCommandSuccess('getValue', value: 'v2');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
@@ -656,8 +663,8 @@ void main() {
         final bundleA = await _createBundle();
         final bundleB = await _createBundle();
         final calls = <String>[];
-        bundleA.webview.enqueueResult('flutterMonaco.getValue()', 'A');
-        bundleB.webview.enqueueResult('flutterMonaco.getValue()', 'B');
+        bundleA.webview.injectCommandSuccess('getValue', value: 'A');
+        bundleB.webview.injectCommandSuccess('getValue', value: 'B');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundleA.controller,
@@ -794,7 +801,7 @@ void main() {
       testWidgets('dispose cancels debounce timers', (tester) async {
         final bundle = await _createBundle();
         final calls = <String>[];
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'A');
+        bundle.webview.injectCommandSuccess('getValue', value: 'A');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
