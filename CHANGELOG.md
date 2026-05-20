@@ -5,22 +5,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.7.0] - 2026-05-19
 
-Better theming, typed Monaco theme registration, and a stricter JS bridge contract. Adds the building blocks for using `flutter_monaco` as a drop-in replacement for native Flutter code editors. See the README's "Migrating from another Flutter code editor" section for the full pattern.
-
 ### Added
-- **Themable chrome.** `MonacoEditorTheme` (an `InheritedTheme`) and `MonacoEditorThemeData` style the built-in loading, error, and status-bar widgets. Nested themes compose; missing values fall back to the surrounding Material theme.
-- **Typed Monaco themes.** `MonacoController.defineTheme(MonacoThemeDefinition)` registers custom syntax themes; `defineThemeFromJson(id, data)` accepts raw Monaco theme JSON. `MonacoThemeDefinition`/`MonacoThemeRule` round-trip via `toJson()`/`fromJson()` for app-level persistence, and `MonacoThemeDefinition.fromMonacoThemeData(id, data)` loads third-party theme files that don't carry a registration id.
-- **Theme-id selection.** `EditorOptions.themeId` overrides the built-in `theme` enum and `MonacoController.setThemeById(id)` switches themes by raw id - useful for persisting user theme choices.
-- **`setHostPageBackgroundColor(color)`.** Recolors Monaco's HTML host page; more reliable than the native WebView background on macOS.
-- **`MonacoJavaScriptException`.** Typed errors from the JS bridge with `operation`, `name`, `message`, `stack`, and raw `details`.
-
-### Changed
-- **Strict JS bridge.** Command methods (`setValue`, `setTheme`, `setLanguage`, `executeAction`, `applyEdits`, `setDecorations`, `setMarkers`, `setJsonDiagnostics`, and others) surface failures as `MonacoJavaScriptException` instead of returning silent fallback values. Reads (`getValue`, `getLineCount`, `getLineContent`) still honor their `defaultValue` parameter.
-- **`MonacoEditor.backgroundColor:` recolors both layers.** Applies the color to the native WebView container and the HTML host page. `MonacoController.setBackgroundColor` remains scoped to the native container.
-- **Empty theme ids rejected.** `setThemeById` and `defineThemeFromJson` throw `ArgumentError` instead of activating Monaco's empty-id fallback.
+- **Themable chrome.** `MonacoEditorTheme` (`InheritedTheme`) styles the built-in loading, error, and status-bar widgets. Composes through `showDialog` and nested overrides; missing values fall back to the surrounding Material theme.
+- **Typed custom themes.** `MonacoThemeDefinition` (freezed) registers custom syntax themes via `defineTheme(...)`, `defineThemeFromJson(id, data)`, or `fromMonacoThemeData(id, data)`. Pair with `EditorOptions.themeId` and `setThemeById` to persist user choices.
+- **Typed bridge errors.** Command methods throw `MonacoJavaScriptException` on failure instead of returning silent defaults. Reads with documented defaults (`getValue`, `getLineCount`, `getLineContent`) still honor them.
+- **Reliable macOS background.** New `setHostPageBackgroundColor` recolors Monaco's HTML host page. Widget `backgroundColor` applies to both native and host-page layers.
 
 ### Docs
-- New README section: "Migrating from another Flutter code editor" - settings model mapping, custom theme registration, chrome theming, toolbar wiring, and background color choices.
+- README: section on migrating from native Flutter code editors covering settings, theme registration, chrome theming, and background colors.
 
 ## [1.6.0] - 2026-05-18
 
