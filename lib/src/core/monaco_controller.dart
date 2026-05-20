@@ -639,6 +639,21 @@ class MonacoController {
   /// Paste from clipboard
   Future<void> paste() => executeAction(MonacoAction.clipboardPasteAction);
 
+  /// Fold all foldable regions in the current model.
+  Future<void> foldAll() => executeAction(MonacoAction.foldAll);
+
+  /// Unfold all foldable regions in the current model.
+  Future<void> unfoldAll() => executeAction(MonacoAction.unfoldAll);
+
+  /// Toggle line comments on the current selection.
+  Future<void> toggleLineComment() => executeAction(MonacoAction.commentLine);
+
+  /// Indent the current selection or active line.
+  Future<void> indentLines() => executeAction(MonacoAction.indentLines);
+
+  /// Outdent the current selection or active line.
+  Future<void> outdentLines() => executeAction(MonacoAction.outdentLines);
+
   // --- EVENT HANDLING ---
 
   /// Wire up event listeners with improved conversion
