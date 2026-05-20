@@ -60,6 +60,7 @@ export 'src/core/monaco_actions.dart' show MonacoAction;
 export 'src/core/monaco_assets.dart' show MonacoAssets;
 export 'src/core/monaco_constants.dart' show MonacoConstants;
 export 'src/core/monaco_controller.dart' show MonacoController;
+export 'src/core/monaco_js_error.dart' show MonacoJavaScriptException;
 
 // Model exports
 export 'src/models/editor_options.dart' show EditorOptions;
@@ -73,6 +74,8 @@ export 'src/models/monaco_enums.dart'
         MonacoTheme,
         RenderWhitespace,
         DiagnosticsSeverity;
+export 'src/models/monaco_theme_definition.dart'
+    show MonacoThemeDefinition, MonacoThemeRule;
 export 'src/models/monaco_types.dart'
     show
         CompletionItem,
@@ -100,3 +103,5 @@ export 'src/widgets/monaco_focus_guard.dart' show MonacoFocusGuard;
 export 'src/widgets/monaco_overlay_boundary.dart' show MonacoOverlayBoundary;
 export 'src/widgets/monaco_route_observer.dart' show MonacoRouteObserver;
 export 'src/widgets/monaco_scaffold.dart' show MonacoScaffold;
+export 'src/widgets/monaco_editor_theme.dart'
+    show MonacoEditorTheme, MonacoEditorThemeData;

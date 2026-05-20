@@ -75,7 +75,11 @@ void main() {
       }
 
       final executedIds = <String>{};
-      final regex = RegExp(r'flutterMonaco\.executeAction\((".*?")');
+      // The envelope dispatcher invokes flutterMonaco.executeAction via
+      // window.flutterMonacoInvoke("executeAction", [<id>, <args>]).
+      final regex = RegExp(
+        r'flutterMonacoInvoke\("executeAction",\s*\[(".*?")',
+      );
       for (final script in webview.executed) {
         final match = regex.firstMatch(script);
         if (match == null) continue;

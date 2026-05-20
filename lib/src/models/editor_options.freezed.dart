@@ -20,10 +20,24 @@ mixin _$EditorOptions {
   /// Changing this value on an active editor triggers a re-tokenization.
   MonacoLanguage get language;
 
-  /// The color theme of the editor.
+  /// The built-in Monaco color theme of the editor.
+  ///
+  /// Use this for Monaco's bundled themes. For custom themes registered
+  /// with `MonacoController.defineTheme`, set [themeId] to the custom
+  /// theme's id instead (it overrides this field when non-null).
   ///
   /// Defaults to [MonacoTheme.vsDark].
   MonacoTheme get theme;
+
+  /// Raw Monaco theme identifier to apply.
+  ///
+  /// When non-null, this is used by `MonacoController.setThemeById`
+  /// instead of [theme]. Intended for:
+  /// - Custom themes registered with `MonacoController.defineTheme`.
+  /// - Apps persisting theme selections as strings.
+  ///
+  /// `null` (the default) falls back to [theme].
+  String? get themeId;
 
   /// The font size in pixels.
   double get fontSize;
@@ -158,6 +172,7 @@ mixin _$EditorOptions {
             (identical(other.language, language) ||
                 other.language == language) &&
             (identical(other.theme, theme) || other.theme == theme) &&
+            (identical(other.themeId, themeId) || other.themeId == themeId) &&
             (identical(other.fontSize, fontSize) ||
                 other.fontSize == fontSize) &&
             (identical(other.fontFamily, fontFamily) ||
@@ -232,6 +247,7 @@ mixin _$EditorOptions {
         runtimeType,
         language,
         theme,
+        themeId,
         fontSize,
         fontFamily,
         lineHeight,
@@ -270,7 +286,7 @@ mixin _$EditorOptions {
 
   @override
   String toString() {
-    return 'EditorOptions(language: $language, theme: $theme, fontSize: $fontSize, fontFamily: $fontFamily, lineHeight: $lineHeight, wordWrap: $wordWrap, minimap: $minimap, lineNumbers: $lineNumbers, rulers: $rulers, tabSize: $tabSize, insertSpaces: $insertSpaces, readOnly: $readOnly, automaticLayout: $automaticLayout, padding: $padding, scrollBeyondLastLine: $scrollBeyondLastLine, smoothScrolling: $smoothScrolling, cursorBlinking: $cursorBlinking, cursorStyle: $cursorStyle, renderWhitespace: $renderWhitespace, bracketPairColorization: $bracketPairColorization, autoClosingBrackets: $autoClosingBrackets, autoClosingQuotes: $autoClosingQuotes, formatOnPaste: $formatOnPaste, formatOnType: $formatOnType, quickSuggestions: $quickSuggestions, fontLigatures: $fontLigatures, parameterHints: $parameterHints, hover: $hover, contextMenu: $contextMenu, mouseWheelZoom: $mouseWheelZoom, roundedSelection: $roundedSelection, selectionHighlight: $selectionHighlight, overviewRulerBorder: $overviewRulerBorder, renderControlCharacters: $renderControlCharacters, disableLayerHinting: $disableLayerHinting, disableMonospaceOptimizations: $disableMonospaceOptimizations)';
+    return 'EditorOptions(language: $language, theme: $theme, themeId: $themeId, fontSize: $fontSize, fontFamily: $fontFamily, lineHeight: $lineHeight, wordWrap: $wordWrap, minimap: $minimap, lineNumbers: $lineNumbers, rulers: $rulers, tabSize: $tabSize, insertSpaces: $insertSpaces, readOnly: $readOnly, automaticLayout: $automaticLayout, padding: $padding, scrollBeyondLastLine: $scrollBeyondLastLine, smoothScrolling: $smoothScrolling, cursorBlinking: $cursorBlinking, cursorStyle: $cursorStyle, renderWhitespace: $renderWhitespace, bracketPairColorization: $bracketPairColorization, autoClosingBrackets: $autoClosingBrackets, autoClosingQuotes: $autoClosingQuotes, formatOnPaste: $formatOnPaste, formatOnType: $formatOnType, quickSuggestions: $quickSuggestions, fontLigatures: $fontLigatures, parameterHints: $parameterHints, hover: $hover, contextMenu: $contextMenu, mouseWheelZoom: $mouseWheelZoom, roundedSelection: $roundedSelection, selectionHighlight: $selectionHighlight, overviewRulerBorder: $overviewRulerBorder, renderControlCharacters: $renderControlCharacters, disableLayerHinting: $disableLayerHinting, disableMonospaceOptimizations: $disableMonospaceOptimizations)';
   }
 }
 
@@ -283,6 +299,7 @@ abstract mixin class $EditorOptionsCopyWith<$Res> {
   $Res call(
       {MonacoLanguage language,
       MonacoTheme theme,
+      String? themeId,
       double fontSize,
       String fontFamily,
       double lineHeight,
@@ -334,6 +351,7 @@ class _$EditorOptionsCopyWithImpl<$Res>
   $Res call({
     Object? language = null,
     Object? theme = null,
+    Object? themeId = freezed,
     Object? fontSize = null,
     Object? fontFamily = null,
     Object? lineHeight = null,
@@ -378,6 +396,10 @@ class _$EditorOptionsCopyWithImpl<$Res>
           ? _self.theme
           : theme // ignore: cast_nullable_to_non_nullable
               as MonacoTheme,
+      themeId: freezed == themeId
+          ? _self.themeId
+          : themeId // ignore: cast_nullable_to_non_nullable
+              as String?,
       fontSize: null == fontSize
           ? _self.fontSize
           : fontSize // ignore: cast_nullable_to_non_nullable
@@ -612,6 +634,7 @@ extension EditorOptionsPatterns on EditorOptions {
     TResult Function(
             MonacoLanguage language,
             MonacoTheme theme,
+            String? themeId,
             double fontSize,
             String fontFamily,
             double lineHeight,
@@ -655,6 +678,7 @@ extension EditorOptionsPatterns on EditorOptions {
         return $default(
             _that.language,
             _that.theme,
+            _that.themeId,
             _that.fontSize,
             _that.fontFamily,
             _that.lineHeight,
@@ -712,6 +736,7 @@ extension EditorOptionsPatterns on EditorOptions {
     TResult Function(
             MonacoLanguage language,
             MonacoTheme theme,
+            String? themeId,
             double fontSize,
             String fontFamily,
             double lineHeight,
@@ -754,6 +779,7 @@ extension EditorOptionsPatterns on EditorOptions {
         return $default(
             _that.language,
             _that.theme,
+            _that.themeId,
             _that.fontSize,
             _that.fontFamily,
             _that.lineHeight,
@@ -808,6 +834,7 @@ extension EditorOptionsPatterns on EditorOptions {
     TResult? Function(
             MonacoLanguage language,
             MonacoTheme theme,
+            String? themeId,
             double fontSize,
             String fontFamily,
             double lineHeight,
@@ -850,6 +877,7 @@ extension EditorOptionsPatterns on EditorOptions {
         return $default(
             _that.language,
             _that.theme,
+            _that.themeId,
             _that.fontSize,
             _that.fontFamily,
             _that.lineHeight,
@@ -896,6 +924,7 @@ class _EditorOptions extends EditorOptions {
   const _EditorOptions(
       {this.language = MonacoLanguage.dart,
       this.theme = MonacoTheme.vsDark,
+      this.themeId,
       this.fontSize = 14,
       this.fontFamily = 'Consolas, "Courier New", monospace',
       this.lineHeight = 1.4,
@@ -942,12 +971,27 @@ class _EditorOptions extends EditorOptions {
   @JsonKey()
   final MonacoLanguage language;
 
-  /// The color theme of the editor.
+  /// The built-in Monaco color theme of the editor.
+  ///
+  /// Use this for Monaco's bundled themes. For custom themes registered
+  /// with `MonacoController.defineTheme`, set [themeId] to the custom
+  /// theme's id instead (it overrides this field when non-null).
   ///
   /// Defaults to [MonacoTheme.vsDark].
   @override
   @JsonKey()
   final MonacoTheme theme;
+
+  /// Raw Monaco theme identifier to apply.
+  ///
+  /// When non-null, this is used by `MonacoController.setThemeById`
+  /// instead of [theme]. Intended for:
+  /// - Custom themes registered with `MonacoController.defineTheme`.
+  /// - Apps persisting theme selections as strings.
+  ///
+  /// `null` (the default) falls back to [theme].
+  @override
+  final String? themeId;
 
   /// The font size in pixels.
   @override
@@ -1167,6 +1211,7 @@ class _EditorOptions extends EditorOptions {
             (identical(other.language, language) ||
                 other.language == language) &&
             (identical(other.theme, theme) || other.theme == theme) &&
+            (identical(other.themeId, themeId) || other.themeId == themeId) &&
             (identical(other.fontSize, fontSize) ||
                 other.fontSize == fontSize) &&
             (identical(other.fontFamily, fontFamily) ||
@@ -1241,6 +1286,7 @@ class _EditorOptions extends EditorOptions {
         runtimeType,
         language,
         theme,
+        themeId,
         fontSize,
         fontFamily,
         lineHeight,
@@ -1279,7 +1325,7 @@ class _EditorOptions extends EditorOptions {
 
   @override
   String toString() {
-    return 'EditorOptions(language: $language, theme: $theme, fontSize: $fontSize, fontFamily: $fontFamily, lineHeight: $lineHeight, wordWrap: $wordWrap, minimap: $minimap, lineNumbers: $lineNumbers, rulers: $rulers, tabSize: $tabSize, insertSpaces: $insertSpaces, readOnly: $readOnly, automaticLayout: $automaticLayout, padding: $padding, scrollBeyondLastLine: $scrollBeyondLastLine, smoothScrolling: $smoothScrolling, cursorBlinking: $cursorBlinking, cursorStyle: $cursorStyle, renderWhitespace: $renderWhitespace, bracketPairColorization: $bracketPairColorization, autoClosingBrackets: $autoClosingBrackets, autoClosingQuotes: $autoClosingQuotes, formatOnPaste: $formatOnPaste, formatOnType: $formatOnType, quickSuggestions: $quickSuggestions, fontLigatures: $fontLigatures, parameterHints: $parameterHints, hover: $hover, contextMenu: $contextMenu, mouseWheelZoom: $mouseWheelZoom, roundedSelection: $roundedSelection, selectionHighlight: $selectionHighlight, overviewRulerBorder: $overviewRulerBorder, renderControlCharacters: $renderControlCharacters, disableLayerHinting: $disableLayerHinting, disableMonospaceOptimizations: $disableMonospaceOptimizations)';
+    return 'EditorOptions(language: $language, theme: $theme, themeId: $themeId, fontSize: $fontSize, fontFamily: $fontFamily, lineHeight: $lineHeight, wordWrap: $wordWrap, minimap: $minimap, lineNumbers: $lineNumbers, rulers: $rulers, tabSize: $tabSize, insertSpaces: $insertSpaces, readOnly: $readOnly, automaticLayout: $automaticLayout, padding: $padding, scrollBeyondLastLine: $scrollBeyondLastLine, smoothScrolling: $smoothScrolling, cursorBlinking: $cursorBlinking, cursorStyle: $cursorStyle, renderWhitespace: $renderWhitespace, bracketPairColorization: $bracketPairColorization, autoClosingBrackets: $autoClosingBrackets, autoClosingQuotes: $autoClosingQuotes, formatOnPaste: $formatOnPaste, formatOnType: $formatOnType, quickSuggestions: $quickSuggestions, fontLigatures: $fontLigatures, parameterHints: $parameterHints, hover: $hover, contextMenu: $contextMenu, mouseWheelZoom: $mouseWheelZoom, roundedSelection: $roundedSelection, selectionHighlight: $selectionHighlight, overviewRulerBorder: $overviewRulerBorder, renderControlCharacters: $renderControlCharacters, disableLayerHinting: $disableLayerHinting, disableMonospaceOptimizations: $disableMonospaceOptimizations)';
   }
 }
 
@@ -1294,6 +1340,7 @@ abstract mixin class _$EditorOptionsCopyWith<$Res>
   $Res call(
       {MonacoLanguage language,
       MonacoTheme theme,
+      String? themeId,
       double fontSize,
       String fontFamily,
       double lineHeight,
@@ -1345,6 +1392,7 @@ class __$EditorOptionsCopyWithImpl<$Res>
   $Res call({
     Object? language = null,
     Object? theme = null,
+    Object? themeId = freezed,
     Object? fontSize = null,
     Object? fontFamily = null,
     Object? lineHeight = null,
@@ -1389,6 +1437,10 @@ class __$EditorOptionsCopyWithImpl<$Res>
           ? _self.theme
           : theme // ignore: cast_nullable_to_non_nullable
               as MonacoTheme,
+      themeId: freezed == themeId
+          ? _self.themeId
+          : themeId // ignore: cast_nullable_to_non_nullable
+              as String?,
       fontSize: null == fontSize
           ? _self.fontSize
           : fontSize // ignore: cast_nullable_to_non_nullable

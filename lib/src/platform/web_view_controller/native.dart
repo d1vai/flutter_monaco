@@ -66,7 +66,11 @@ abstract class WebViewController implements PlatformWebViewController {
     bool allowCdnFonts = false,
   }) async {
     final htmlFilePath = await MonacoAssets.indexHtmlPath(
-      cacheKey: Object.hash(customCss, allowCdnFonts),
+      cacheKey: Object.hash(
+        MonacoAssets.htmlGenerationVersion,
+        customCss,
+        allowCdnFonts,
+      ),
     );
 
     // Use cache key in filename to avoid conflicts.

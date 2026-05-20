@@ -14,10 +14,24 @@ sealed class EditorOptions with _$EditorOptions {
     /// Changing this value on an active editor triggers a re-tokenization.
     @Default(MonacoLanguage.dart) MonacoLanguage language,
 
-    /// The color theme of the editor.
+    /// The built-in Monaco color theme of the editor.
+    ///
+    /// Use this for Monaco's bundled themes. For custom themes registered
+    /// with `MonacoController.defineTheme`, set [themeId] to the custom
+    /// theme's id instead (it overrides this field when non-null).
     ///
     /// Defaults to [MonacoTheme.vsDark].
     @Default(MonacoTheme.vsDark) MonacoTheme theme,
+
+    /// Raw Monaco theme identifier to apply.
+    ///
+    /// When non-null, this is used by `MonacoController.setThemeById`
+    /// instead of [theme]. Intended for:
+    /// - Custom themes registered with `MonacoController.defineTheme`.
+    /// - Apps persisting theme selections as strings.
+    ///
+    /// `null` (the default) falls back to [theme].
+    String? themeId,
 
     /// The font size in pixels.
     @Default(14) double fontSize,
@@ -141,12 +155,31 @@ sealed class EditorOptions with _$EditorOptions {
 
   const EditorOptions._();
 
+  /// Returns the Monaco theme id to apply.
+  ///
+  /// Returns [themeId] if non-null (custom or persisted themes), otherwise
+  /// falls back to the built-in [theme]'s id.
+  String get effectiveThemeId => themeId ?? theme.id;
+
   factory EditorOptions.fromJson(Map<String, dynamic> json) {
+    // Accept legacy single-field `theme` values (id strings) by detecting
+    // built-in ids vs custom ids. Built-in ids round-trip via [theme];
+    // unrecognized ids load into [themeId] so custom themes survive
+    // persistence. When both fields are present, keep `theme` as the built-in
+    // fallback and use `themeId` as the raw override.
+    final builtInIds = MonacoTheme.values.map((value) => value.id).toSet();
+    final rawBuiltInTheme = json.tryGetString('theme');
+    final rawThemeId = json.tryGetString('themeId');
+    final legacyCustomThemeId =
+        rawThemeId == null && !builtInIds.contains(rawBuiltInTheme)
+            ? rawBuiltInTheme
+            : null;
+
     return EditorOptions(
       language: MonacoLanguage.fromId(
           json.getString('language', defaultValue: 'markdown')),
-      theme:
-          MonacoTheme.fromId(json.getString('theme', defaultValue: 'vs-dark')),
+      theme: MonacoTheme.fromId(rawBuiltInTheme, orElse: MonacoTheme.vsDark),
+      themeId: rawThemeId ?? legacyCustomThemeId,
       fontSize: json.getDouble('fontSize', defaultValue: 14),
       fontFamily: json.getString('fontFamily',
           defaultValue: 'Consolas, "Courier New", monospace'),

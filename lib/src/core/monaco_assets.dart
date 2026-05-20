@@ -57,6 +57,18 @@ class MonacoAssets {
   /// native platforms to ensure the correct version is used.
   static const String monacoVersion = '0.54.0';
 
+  /// Cache-busting version for generated HTML and the JS bridge contract.
+  ///
+  /// Native platforms cache generated `monaco_<key>.html` files inside the
+  /// per-[monacoVersion] directory. When the bundled Monaco version doesn't
+  /// change but the generated HTML or `window.flutterMonaco` bridge shape
+  /// does, callers must include this constant in their cache key so stale
+  /// HTML from prior package versions is regenerated on first load.
+  ///
+  /// Bump this whenever [generateIndexHtml] output or the JS bridge changes
+  /// in a way Dart depends on.
+  static const int htmlGenerationVersion = 2;
+
   static Completer<void>? _initCompleter;
 
   // HTML cache to avoid regenerating the same HTML multiple times
@@ -111,11 +123,13 @@ class MonacoAssets {
 
         if (!ok) {
           debugPrint(
-              '[MonacoAssets] Monaco not found or incomplete, copying assets...');
+            '[MonacoAssets] Monaco not found or incomplete, copying assets...',
+          );
           await _copyAllAssets(targetDir);
         } else {
           debugPrint(
-              '[MonacoAssets] Monaco already extracted at: $targetDir (version $monacoVersion)');
+            '[MonacoAssets] Monaco already extracted at: $targetDir (version $monacoVersion)',
+          );
         }
 
         completer.complete();
@@ -212,11 +226,7 @@ class MonacoAssets {
     final directory = Directory(targetDir);
 
     if (!directory.existsSync()) {
-      return {
-        'exists': false,
-        'path': targetDir,
-        'version': monacoVersion,
-      };
+      return {'exists': false, 'path': targetDir, 'version': monacoVersion};
     }
 
     // Count files and calculate size
@@ -324,11 +334,13 @@ class MonacoAssets {
     final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
     final monacoAssets = manifest
         .listAssets()
-        .where((key) => key.startsWith(
-            '$assetBaseDir/')) // Trailing slash prevents matching similar prefixes
+        .where(
+          (key) => key.startsWith('$assetBaseDir/'),
+        ) // Trailing slash prevents matching similar prefixes
         .where((key) => !key.endsWith('.DS_Store')) // Skip macOS metadata files
-        .where((key) => !key
-            .endsWith('/$_htmlFileName')) // Exclude index.html from copy list
+        .where(
+          (key) => !key.endsWith('/$_htmlFileName'),
+        ) // Exclude index.html from copy list
         .toList();
 
     debugPrint(
@@ -383,7 +395,8 @@ class MonacoAssets {
     final sentinelFile = File(p.join(targetDir, '.monaco_complete'));
     await sentinelFile.writeAsString(monacoVersion);
     debugPrint(
-        '[MonacoAssets] Sentinel file written for version $monacoVersion');
+      '[MonacoAssets] Sentinel file written for version $monacoVersion',
+    );
   }
 
   /// Generates the HTML document that hosts the Monaco Editor.
@@ -659,9 +672,6 @@ class MonacoAssets {
               editor.onDidChangeCursorSelection(sendStats);
               sendStats();
 
-              postMessageToFlutter({ event: 'onEditorReady' });
-              console.log('[Monaco] Editor is ready and has sent the onEditorReady event.');
-              
               // Set up typed API
               (function () {
                 const E = () => window.editor;
@@ -715,6 +725,63 @@ class MonacoAssets {
                 const escapeRegExp = (value) =>
                   (value ?? '').replace(/$jsEscapePattern/g, '\\\\\$&');
 
+                // Strict accessors used by the new flutterMonacoInvoke envelope.
+                // Helpers that depend on the editor/model should call these so
+                // missing-state errors propagate to Dart instead of being
+                // silently swallowed.
+                const requireEditor = () => {
+                  const ed = E();
+                  if (!ed) {
+                    throw new Error('Monaco editor is not ready.');
+                  }
+                  return ed;
+                };
+                const requireModel = () => {
+                  const ed = requireEditor();
+                  const model = ed.getModel ? ed.getModel() : null;
+                  if (!model) {
+                    throw new Error('Monaco editor has no active model.');
+                  }
+                  return model;
+                };
+
+                // Bridge dispatcher with a result envelope.
+                //
+                // Dart-side _invokeMonacoCommand calls this so that any
+                // JavaScript error inside a flutterMonaco helper is captured
+                // as a structured failure instead of crossing the WebView
+                // boundary as an uncaught exception.
+                //
+                // Success: { __flutterMonacoEval: true, ok: true, isUndefined, value }
+                // Failure: { __flutterMonacoEval: true, ok: false, error: { name, message, stack } }
+                window.flutterMonacoInvoke = (method, args) => {
+                  try {
+                    const api = window.flutterMonaco;
+                    const fn = api && api[method];
+                    if (typeof fn !== 'function') {
+                      throw new Error('Unknown flutterMonaco method: ' + method);
+                    }
+                    const value = fn.apply(api, Array.isArray(args) ? args : []);
+                    return {
+                      __flutterMonacoEval: true,
+                      ok: true,
+                      isUndefined: typeof value === 'undefined',
+                      value: typeof value === 'undefined' ? null : value,
+                    };
+                  } catch (e) {
+                    console.error('[flutterMonaco] invoke failed:', method, e);
+                    return {
+                      __flutterMonacoEval: true,
+                      ok: false,
+                      error: {
+                        name: e && e.name ? String(e.name) : 'Error',
+                        message: e && e.message ? String(e.message) : String(e),
+                        stack: e && e.stack ? String(e.stack) : null,
+                      },
+                    };
+                  }
+                };
+
                 window.flutterMonaco = {
 
                   // Basic editor operations
@@ -759,22 +826,71 @@ class MonacoAssets {
                       setTimeout(() => requestAnimationFrame(attempt), 0);
                     } catch (_) {}
                   },
-                  getValue: () => E().getValue(),
-                  setValue: (v) => E().setValue(v || ''),
-                  setTheme: (theme) => monaco.editor.setTheme(theme),
-                  setLanguage: (lang) => monaco.editor.setModelLanguage(E().getModel(), lang),
-                  updateOptions: (opts) => E().updateOptions(opts),
-                  executeAction: (actionId, args) => {
-                    const ed = E();
-                    const action = ed?.getAction ? ed.getAction(actionId) : null;
-                    if (action && typeof action.run === 'function') {
-                      try {
-                        return action.run(args);
-                      } catch (_) {}
-                    }
-                    return ed.trigger('flutter-bridge', actionId, args);
+                  getValue: () => requireEditor().getValue(),
+                  setValue: (v) => {
+                    requireEditor().setValue(v || '');
+                    return true;
                   },
-                  
+                  defineTheme: (name, data) => {
+                    if (!window.monaco || !monaco.editor) {
+                      throw new Error('Monaco editor API is not available.');
+                    }
+                    if (!name || typeof name !== 'string') {
+                      throw new Error('Theme name must be a non-empty string.');
+                    }
+                    monaco.editor.defineTheme(name, data || {});
+                    return true;
+                  },
+                  setHostPageBackground: (color) => {
+                    if (!color) {
+                      throw new Error('Host page background color is required.');
+                    }
+                    const value = String(color);
+                    document.documentElement.style.backgroundColor = value;
+                    document.body.style.backgroundColor = value;
+                    const container = document.getElementById('editor-container');
+                    if (container) container.style.backgroundColor = value;
+                    return true;
+                  },
+                  setTheme: (theme) => {
+                    if (!theme || typeof theme !== 'string') {
+                      throw new Error('Theme id must be a non-empty string.');
+                    }
+                    monaco.editor.setTheme(theme);
+                    return true;
+                  },
+                  getTheme: () => {
+                    if (!window.monaco || !monaco.editor ||
+                        typeof monaco.editor.getTheme !== 'function') {
+                      return null;
+                    }
+                    const theme = monaco.editor.getTheme();
+                    if (!theme) return null;
+                    if (typeof theme === 'string') return theme;
+                    return theme.themeName || theme.id || null;
+                  },
+                  setLanguage: (lang) => {
+                    monaco.editor.setModelLanguage(requireModel(), lang);
+                    return true;
+                  },
+                  updateOptions: (opts) => {
+                    requireEditor().updateOptions(opts);
+                    return true;
+                  },
+                  executeAction: (actionId, args) => {
+                    if (!actionId || typeof actionId !== 'string') {
+                      throw new Error('Action id must be a non-empty string.');
+                    }
+                    const ed = requireEditor();
+                    const action = ed.getAction ? ed.getAction(actionId) : null;
+                    if (action && typeof action.run === 'function') {
+                      action.run(args);
+                      return true;
+                    }
+                    ed.trigger('flutter-bridge', actionId, args);
+                    return true;
+                  },
+
                   // Selection
                   getSelection: () => {
                     const s = E().getSelection();
@@ -783,17 +899,21 @@ class MonacoAssets {
                       endLineNumber: s.endLineNumber, endColumn: s.endColumn
                     } : null;
                   },
-                  setSelection: (r) => E().setSelection(r),
-                  
+                  setSelection: (r) => {
+                    requireEditor().setSelection(r);
+                    return true;
+                  },
+
                   // Cursor
                   getCursorPosition: () => {
                     const p = E().getPosition();
                     return p ? { lineNumber: p.lineNumber, column: p.column } : null;
                   },
                   setCursorPosition: (line, column) => {
-                    E().setPosition({ lineNumber: line, column: column });
+                    requireEditor().setPosition({ lineNumber: line, column: column });
+                    return true;
                   },
-                  
+
                   // Navigation
                   revealLine: (ln, center) =>
                     center ? E().revealLineInCenter(ln) : E().revealLine(ln),
@@ -801,8 +921,8 @@ class MonacoAssets {
                     center ? E().revealRangeInCenter(r) : E().revealRange(r),
 
                   // Line operations
-                  getLineCount: () => E().getModel().getLineCount(),
-                  getLineContent: (ln) => E().getModel().getLineContent(ln),
+                  getLineCount: () => requireModel().getLineCount(),
+                  getLineContent: (ln) => requireModel().getLineContent(ln),
                   
                   // Word lookup
                   getWordAtPosition: (line, column) => {
@@ -813,21 +933,26 @@ class MonacoAssets {
                   },
 
                   // Edits
-                  applyEdits: (edits, opts) =>
-                    E().getModel().applyEdits(edits || [], opts || {}),
+                  applyEdits: (edits, opts) => {
+                    requireModel().applyEdits(edits || [], opts || {});
+                    return true;
+                  },
 
                   // Decorations
                   deltaDecorations: (oldIds, newDecos) =>
-                    E().deltaDecorations(oldIds || [], newDecos || []),
+                    requireEditor().deltaDecorations(oldIds || [], newDecos || []),
 
                   // JSON language diagnostics
                   setJsonDiagnosticsOptions: (diagnostics) => {
                     monaco.languages.json.jsonDefaults.setDiagnosticsOptions(diagnostics);
+                    return true;
                   },
 
                   // Markers (diagnostics)
-                  setModelMarkers: (owner, markers) =>
-                    monaco.editor.setModelMarkers(E().getModel(), owner || 'flutter', markers || []),
+                  setModelMarkers: (owner, markers) => {
+                    monaco.editor.setModelMarkers(requireModel(), owner || 'flutter', markers || []);
+                    return true;
+                  },
 
                   // Find & replace (programmatic)
                   findMatches: (q, options, limit) => {
@@ -1471,6 +1596,9 @@ class MonacoAssets {
                   };
                 })();
               })();
+
+              postMessageToFlutter({ event: 'onEditorReady' });
+              console.log('[Monaco] Editor is ready and the Flutter bridge is installed.');
             });
 
             monaco.editor.create(document.getElementById('editor-container'), {

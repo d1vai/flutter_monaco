@@ -169,7 +169,9 @@ void main() {
         )));
         await tester.pump();
 
-        bundle.webview.assertExecuted('setValue("initial content")');
+        final setValueScripts = bundle.webview.scriptsContaining('"setValue"');
+        expect(setValueScripts.length, 1);
+        expect(setValueScripts.first, contains('"initial content"'));
 
         // Update widget with different initialValue
         await tester.pumpWidget(_wrap(MonacoEditor(
@@ -178,8 +180,12 @@ void main() {
         )));
         await tester.pump();
 
-        // Should NOT set the new value
-        bundle.webview.assertNotExecuted('setValue("new content")');
+        // Should NOT set the new value (initialValue is applied only once)
+        expect(
+          bundle.webview.scriptsContaining('"setValue"').length,
+          1,
+          reason: 'initialValue must only be applied during initial bootstrap',
+        );
       });
 
       testWidgets('initialSelection applied after initialValue',
@@ -377,8 +383,8 @@ void main() {
           (tester) async {
         final bundle = await _createBundle();
         final calls = <String>[];
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'A');
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'B');
+        bundle.webview.injectCommandSuccess('getValue', value: 'A');
+        bundle.webview.injectCommandSuccess('getValue', value: 'B');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
@@ -408,7 +414,7 @@ void main() {
       testWidgets('flush event bypasses debounce', (tester) async {
         final bundle = await _createBundle();
         final calls = <String>[];
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'flushed');
+        bundle.webview.injectCommandSuccess('getValue', value: 'flushed');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
@@ -431,7 +437,7 @@ void main() {
           (tester) async {
         final bundle = await _createBundle();
         final calls = <String>[];
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'content');
+        bundle.webview.injectCommandSuccess('getValue', value: 'content');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
@@ -482,8 +488,8 @@ void main() {
         final bundle = await _createBundle();
         final calls1 = <String>[];
         final calls2 = <String>[];
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'v1');
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'v2');
+        bundle.webview.injectCommandSuccess('getValue', value: 'v1');
+        bundle.webview.injectCommandSuccess('getValue', value: 'v2');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
@@ -605,6 +611,44 @@ void main() {
         expect(find.text('Lines: 42'), findsOneWidget);
       });
 
+      testWidgets('MonacoEditorTheme customizes default status bar',
+          (tester) async {
+        final bundle = await _createBundle();
+        await tester.pumpWidget(_wrap(
+          MonacoEditorTheme(
+            data: const MonacoEditorThemeData(
+              statusBarBackgroundColor: Colors.black,
+              statusBarBorderColor: Colors.red,
+              statusBarTextStyle: TextStyle(color: Colors.green),
+              statusBarSpacing: 8,
+            ),
+            child: MonacoEditor(
+              controller: bundle.controller,
+              showStatusBar: true,
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        bundle.webview.emitToChannel(
+          'flutterChannel',
+          '{"event":"stats","lineCount":42,"cursorLine":2,"cursorColumn":3}',
+        );
+        await tester.pump();
+
+        final container = tester.widget<Container>(
+          find
+              .descendant(
+                of: find.byType(MonacoEditor),
+                matching: find.byType(Container),
+              )
+              .last,
+        );
+        final decoration = container.decoration! as BoxDecoration;
+        expect(decoration.color, Colors.black);
+        expect(find.text('Ln 2:3'), findsOneWidget);
+      });
+
       testWidgets('status bar hidden when showStatusBar false', (tester) async {
         final bundle = await _createBundle();
         await tester.pumpWidget(_wrap(MonacoEditor(
@@ -623,8 +667,8 @@ void main() {
         final bundleA = await _createBundle();
         final bundleB = await _createBundle();
         final calls = <String>[];
-        bundleA.webview.enqueueResult('flutterMonaco.getValue()', 'A');
-        bundleB.webview.enqueueResult('flutterMonaco.getValue()', 'B');
+        bundleA.webview.injectCommandSuccess('getValue', value: 'A');
+        bundleB.webview.injectCommandSuccess('getValue', value: 'B');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundleA.controller,
@@ -761,7 +805,7 @@ void main() {
       testWidgets('dispose cancels debounce timers', (tester) async {
         final bundle = await _createBundle();
         final calls = <String>[];
-        bundle.webview.enqueueResult('flutterMonaco.getValue()', 'A');
+        bundle.webview.injectCommandSuccess('getValue', value: 'A');
 
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
@@ -825,13 +869,14 @@ void main() {
     });
 
     group('styling', () {
-      testWidgets('backgroundColor applied', (tester) async {
+      testWidgets('backgroundColor applies both native and host-page layers',
+          (tester) async {
         final bundle = await _createBundle();
         await tester.pumpWidget(_wrap(MonacoEditor(
           controller: bundle.controller,
           backgroundColor: Colors.red,
         )));
-        await tester.pump();
+        await tester.pumpAndSettle();
 
         final container = tester.widget<Container>(
           find
@@ -842,11 +887,57 @@ void main() {
               .first,
         );
         expect(container.color, Colors.red);
+
+        // Native WebView API was invoked.
         expect(
           bundle.webview.executed
               .any((s) => s.startsWith('SET_BACKGROUND_COLOR')),
           true,
+          reason: 'setBackgroundColor must hit the native WebView container',
         );
+
+        // Host page recolor was invoked through the bridge envelope.
+        expect(
+          bundle.webview
+              .scriptsContaining('"setHostPageBackground"')
+              .isNotEmpty,
+          true,
+          reason:
+              'backgroundColor should also recolor Monaco\'s HTML host page',
+        );
+      });
+
+      testWidgets('host-page background failure does not break initialization',
+          (tester) async {
+        final bundle = await _createBundle();
+        bundle.webview.throwOnContains('"setHostPageBackground"');
+
+        await tester.pumpWidget(_wrap(MonacoEditor(
+          controller: bundle.controller,
+          backgroundColor: Colors.red,
+        )));
+        await tester.pumpAndSettle();
+
+        // Native layer succeeds; HTML host-page failure is best-effort.
+        expect(find.byKey(const Key('webview')), findsOneWidget);
+        expect(find.text('Failed to Initialize Editor'), findsNothing);
+      });
+
+      testWidgets('native background failure does not break initialization',
+          (tester) async {
+        final bundle = await _createBundle();
+        bundle.webview.setBackgroundColorError =
+            StateError('Simulated macOS native background failure');
+
+        await tester.pumpWidget(_wrap(MonacoEditor(
+          controller: bundle.controller,
+          backgroundColor: Colors.red,
+        )));
+        await tester.pumpAndSettle();
+
+        // Native failure is best-effort; HTML host-page recolor still runs.
+        expect(find.byKey(const Key('webview')), findsOneWidget);
+        expect(find.text('Failed to Initialize Editor'), findsNothing);
       });
 
       testWidgets('padding applied', (tester) async {
@@ -926,6 +1017,131 @@ void main() {
         final joined = bundle.webview.executed.join('\n');
         expect(joined.contains('SET_INTERACTION:false'), true);
         expect(joined.contains('SET_INTERACTION:true'), true);
+      });
+    });
+
+    group('default chrome theming', () {
+      testWidgets('MonacoEditorTheme customizes loading UI', (tester) async {
+        final bundle = await _createBundle(ready: false);
+        await tester.pumpWidget(_wrap(
+          MonacoEditorTheme(
+            data: const MonacoEditorThemeData(
+              loadingIndicatorColor: Colors.orange,
+              loadingBackgroundColor: Colors.black,
+            ),
+            child: MonacoEditor(controller: bundle.controller),
+          ),
+        ));
+
+        final progress = tester.widget<CircularProgressIndicator>(
+          find.byType(CircularProgressIndicator),
+        );
+        expect(progress.color, Colors.orange);
+      });
+
+      testWidgets('MonacoEditorTheme customizes default error UI',
+          (tester) async {
+        final bundle = await _createBundle();
+        bundle.webview.injectCommandFailure('setValue', message: 'fail');
+
+        await tester.pumpWidget(_wrap(
+          MonacoEditorTheme(
+            data: const MonacoEditorThemeData(
+              errorIconColor: Colors.purple,
+            ),
+            child: MonacoEditor(
+              controller: bundle.controller,
+              initialValue: 'trigger',
+            ),
+          ),
+        ));
+        await tester.pump();
+
+        final icon = tester.widget<Icon>(find.byIcon(Icons.error_outline));
+        expect(icon.color, Colors.purple);
+      });
+
+      testWidgets('MonacoEditorTheme composes nested overrides',
+          (tester) async {
+        MonacoEditorThemeData? resolvedTheme;
+
+        await tester.pumpWidget(MaterialApp(
+          home: MonacoEditorTheme(
+            data: const MonacoEditorThemeData(
+              loadingIndicatorColor: Colors.orange,
+              errorIconColor: Colors.purple,
+            ),
+            child: MonacoEditorTheme(
+              data: const MonacoEditorThemeData(
+                statusBarBackgroundColor: Colors.black,
+              ),
+              child: Builder(
+                builder: (context) {
+                  resolvedTheme = MonacoEditorTheme.of(context);
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          ),
+        ));
+
+        expect(resolvedTheme, isNotNull);
+        expect(resolvedTheme!.loadingIndicatorColor, Colors.orange);
+        expect(resolvedTheme!.errorIconColor, Colors.purple);
+        expect(resolvedTheme!.statusBarBackgroundColor, Colors.black);
+      });
+
+      testWidgets(
+          'MonacoEditorTheme propagates into dialog routes via captureAll',
+          (tester) async {
+        final bundle = await _createBundle();
+        MonacoEditorThemeData? capturedTheme;
+
+        await tester.pumpWidget(MaterialApp(
+          home: MonacoEditorTheme(
+            data: const MonacoEditorThemeData(
+              loadingIndicatorColor: Colors.cyan,
+              statusBarBackgroundColor: Colors.black,
+            ),
+            child: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: Column(children: [
+                    Expanded(
+                      child: MonacoEditor(controller: bundle.controller),
+                    ),
+                    ElevatedButton(
+                      key: const Key('openDialog'),
+                      onPressed: () {
+                        showDialog<void>(
+                          context: context,
+                          builder: (dialogContext) => Builder(
+                            builder: (innerContext) {
+                              capturedTheme =
+                                  MonacoEditorTheme.of(innerContext);
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        );
+                      },
+                      child: const Text('open'),
+                    ),
+                  ]),
+                );
+              },
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('openDialog')));
+        await tester.pumpAndSettle();
+
+        // showDialog uses InheritedTheme.captureAll, which invokes our
+        // MonacoEditorTheme.wrap to carry the data across the dialog route.
+        expect(capturedTheme, isNotNull);
+        expect(capturedTheme!.loadingIndicatorColor, Colors.cyan);
+        expect(capturedTheme!.statusBarBackgroundColor, Colors.black);
       });
     });
   });

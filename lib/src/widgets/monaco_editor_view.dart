@@ -257,13 +257,18 @@ class _MonacoEditorState extends State<MonacoEditor> {
     if (widget.options != oldWidget.options) {
       _ignoreAsync(_controller!.updateOptions(widget.options));
       // Explicitly update theme and language as they require separate bridge calls.
-      _ignoreAsync(_controller!.setTheme(widget.options.theme));
+      _ignoreAsync(
+        _controller!.setThemeById(widget.options.effectiveThemeId),
+      );
       _ignoreAsync(_controller!.setLanguage(widget.options.language));
     }
 
     if (widget.backgroundColor != oldWidget.backgroundColor &&
         widget.backgroundColor != null) {
       _ignoreAsync(_controller!.setBackgroundColor(widget.backgroundColor!));
+      _ignoreAsync(
+        _controller!.setHostPageBackgroundColor(widget.backgroundColor!),
+      );
     }
 
     // If the content change callback has been updated, we need to rewire the listener.
@@ -314,16 +319,30 @@ class _MonacoEditorState extends State<MonacoEditor> {
         return;
       }
 
-      // Apply initial values and settings post-readiness.
+      // Apply initial values and settings post-readiness. Background is
+      // cosmetic - the widget already paints its own container behind the
+      // WebView - so a platform failure here must not abort initialization.
+      // The split exists because macOS native backgrounds are unreliable;
+      // both layers can fail independently.
       if (widget.backgroundColor != null) {
-        await _controller!.setBackgroundColor(widget.backgroundColor!);
+        try {
+          await _controller!.setBackgroundColor(widget.backgroundColor!);
+        } catch (e) {
+          debugPrint('[MonacoEditor] setBackgroundColor failed: $e');
+        }
+        try {
+          await _controller!
+              .setHostPageBackgroundColor(widget.backgroundColor!);
+        } catch (e) {
+          debugPrint('[MonacoEditor] setHostPageBackgroundColor failed: $e');
+        }
       }
       // Ensure options are up-to-date in case they changed during bootstrap
       if (_isBootstrapCurrent(bootstrapToken)) {
         // We can't easily check if they differ from what we passed to create(),
         // so we just re-apply them to be safe. This is cheap if no changes.
         await _controller!.updateOptions(widget.options);
-        await _controller!.setTheme(widget.options.theme);
+        await _controller!.setThemeById(widget.options.effectiveThemeId);
         await _controller!.setLanguage(widget.options.language);
       }
 
@@ -602,8 +621,10 @@ class _MonacoStatusBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = theme.textTheme.bodySmall ?? const TextStyle(fontSize: 12);
+    final theme = MonacoEditorTheme.of(context);
+    final style = theme.statusBarTextStyle ??
+        Theme.of(context).textTheme.bodySmall ??
+        const TextStyle(fontSize: 12);
 
     return ValueListenableBuilder<LiveStats>(
       valueListenable: controller.liveStats,
@@ -619,15 +640,21 @@ class _MonacoStatusBar extends StatelessWidget {
         ].where((s) => s.isNotEmpty).toList();
 
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: theme.statusBarPadding ??
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface.withValues(alpha: 0.95),
-            border:
-                Border(top: BorderSide(color: theme.dividerColor, width: 0.5)),
+            color: theme.statusBarBackgroundColor,
+            border: Border(
+              top: BorderSide(
+                color: theme.statusBarBorderColor ??
+                    Theme.of(context).dividerColor,
+                width: 0.5,
+              ),
+            ),
           ),
           child: Wrap(
             alignment: WrapAlignment.end,
-            spacing: 16,
+            spacing: theme.statusBarSpacing ?? 16,
             runSpacing: 4,
             children: [
               for (final entry in entries) Text(entry, style: style),
@@ -644,58 +671,68 @@ class _DefaultLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(strokeWidth: 3),
+    final theme = MonacoEditorTheme.of(context);
+    return ColoredBox(
+      color: theme.loadingBackgroundColor ?? Colors.transparent,
+      child: Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 3,
+            color: theme.loadingIndicatorColor,
+          ),
+        ),
       ),
     );
   }
 }
 
 class _DefaultError extends StatelessWidget {
-  const _DefaultError({required this.error, this.onRetry});
+  const _DefaultError({
+    required this.error,
+    this.onRetry,
+  });
 
   final Object error;
   final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = theme.textTheme.bodyMedium;
+    final materialTheme = Theme.of(context);
+    final theme = MonacoEditorTheme.of(context);
+    final titleStyle =
+        theme.errorTitleStyle ?? materialTheme.textTheme.titleMedium;
+    final style = theme.errorMessageStyle ?? materialTheme.textTheme.bodyMedium;
 
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, color: theme.colorScheme.error, size: 36),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to Initialize Editor',
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '$error',
-              textAlign: TextAlign.center,
-              style: style?.copyWith(color: theme.colorScheme.error),
-            ),
-            if (onRetry != null) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                ),
+    return ColoredBox(
+      color: theme.errorBackgroundColor ?? Colors.transparent,
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: theme.errorIconColor ?? materialTheme.colorScheme.error,
+                size: 36,
               ),
+              const SizedBox(height: 16),
+              Text('Failed to Initialize Editor', style: titleStyle),
+              const SizedBox(height: 8),
+              Text('$error', textAlign: TextAlign.center, style: style),
+              if (onRetry != null) ...[
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                  style: theme.retryButtonStyle,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -24,6 +24,8 @@ A Flutter plugin for integrating the Monaco Editor (VS Code's editor) into Flutt
 - 🔍 **Find & Replace** - Full programmatic find/replace with regex support
 - 🎭 **Decorations & Markers** - Add highlights, errors, warnings to your code
 - 📡 **Event Streams** - Listen to content changes, selection, focus events
+- 🎨 **Themeable Chrome** - Customize loading, error, and status-bar UI via `MonacoEditorTheme`
+- 🧰 **Typed Actions** - `MonacoAction` constants cover Monaco's full command surface (fold, indent, comment, format, find, and more)
 
 > **⚠️ Platform Support:** Currently supports **Android**, **iOS**, **macOS**, **Windows**, and **Web**. Linux is **not supported** at this time.
 
@@ -64,6 +66,98 @@ Add `flutter_monaco` to your `pubspec.yaml`:
 dependencies:
   flutter_monaco: ^<latest version>
 ```
+
+## Migrating from another Flutter code editor
+
+If you're moving from another Flutter code editor package (such as `flutter_code_editor`), keep your existing settings model and toolbar wiring - map them into Monaco's typed APIs instead of replacing your app structure.
+
+### 1. Map app settings to `EditorOptions`
+
+```dart
+class CodeEditorSettings {
+  const CodeEditorSettings({
+    required this.languageId,
+    required this.themeId,
+    required this.fontSize,
+    required this.tabSize,
+    required this.wordWrap,
+  });
+
+  final String languageId;
+  final String themeId; // built-in id ("vs-dark") or custom theme id
+  final double fontSize;
+  final int tabSize;
+  final bool wordWrap;
+}
+
+EditorOptions toMonacoOptions(CodeEditorSettings s) {
+  return EditorOptions(
+    language: MonacoLanguage.fromId(s.languageId),
+    theme: MonacoTheme.vsDark,
+    themeId: s.themeId, // overrides theme when set; custom themes work too
+    fontSize: s.fontSize,
+    tabSize: s.tabSize,
+    wordWrap: s.wordWrap,
+  );
+}
+```
+
+### 2. Persist and register custom themes once
+
+Use `MonacoThemeDefinition` for custom syntax themes that should round-trip with your app settings:
+
+```dart
+const appDark = MonacoThemeDefinition(
+  id: 'app-dark',
+  base: MonacoTheme.vsDark,
+  rules: [
+    MonacoThemeRule(token: 'comment', foreground: '6A9955', fontStyle: 'italic'),
+  ],
+  colors: {
+    'editor.background': '#1E1E1E',
+    'editor.foreground': '#D4D4D4',
+  },
+);
+
+await controller.defineTheme(appDark);
+await controller.setThemeById('app-dark'); // or set EditorOptions.themeId
+```
+
+For Monaco theme JSON exported elsewhere, use `controller.defineThemeFromJson(id, data)`.
+
+### 3. Style the editor chrome with `MonacoEditorTheme`
+
+Customize the built-in loading/error/status-bar widgets without replacing them:
+
+```dart
+MonacoEditorTheme(
+  data: MonacoEditorThemeData(
+    statusBarBackgroundColor: Theme.of(context).colorScheme.surface,
+    statusBarBorderColor: Theme.of(context).dividerColor,
+    loadingIndicatorColor: Theme.of(context).colorScheme.primary,
+  ),
+  child: MonacoEditor(options: options, showStatusBar: true),
+);
+```
+
+### 4. Wire toolbar buttons through the controller
+
+Dispatch any Monaco command via `executeAction` with a typed `MonacoAction` constant:
+
+```dart
+await controller.executeAction(MonacoAction.foldAll);
+await controller.executeAction(MonacoAction.unfoldAll);
+await controller.executeAction(MonacoAction.commentLine);
+await controller.executeAction(MonacoAction.indentLines);
+await controller.executeAction(MonacoAction.outdentLines);
+await controller.executeAction(MonacoAction.formatDocument);
+```
+
+`MonacoAction` exposes the full set of Monaco's built-in command ids as autocomplete-friendly constants. For commands not enumerated (e.g. custom actions registered via Monaco's `editor.addCommand`), pass the raw id string to `executeAction` instead.
+
+### 5. Backgrounds
+
+`setBackgroundColor` recolors the native WebView container. `setHostPageBackgroundColor` recolors Monaco's HTML host page (more reliable on macOS). To recolor Monaco's editor surface itself, set `editor.background` in a `MonacoThemeDefinition` rather than relying on these.
 
 ## Quick Start
 
