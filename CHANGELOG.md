@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Themable chrome.** `MonacoEditorTheme` (`InheritedTheme`) styles the built-in loading, error, and status-bar widgets. Composes through `showDialog` and nested overrides; missing values fall back to the surrounding Material theme.
-- **Typed custom themes.** `MonacoThemeDefinition` (freezed) registers custom syntax themes via `defineTheme(...)`, `defineThemeFromJson(id, data)`, or `fromMonacoThemeData(id, data)`. Pair with `EditorOptions.themeId` and `setThemeById` to persist user choices.
+- **Typed custom themes.** `MonacoThemeDefinition` (freezed) registers custom syntax themes via `defineTheme(...)`, `defineThemeFromJson(id, data)`, or `fromMonacoThemeData(id, data)`. Pair with `EditorOptions.themeId`, `setThemeById`, and `getThemeId()` (read live theme id) to switch and persist user choices.
 - **Typed bridge errors.** Command methods throw `MonacoJavaScriptException` on failure instead of returning silent defaults. Reads with documented defaults (`getValue`, `getLineCount`, `getLineContent`) still honor them.
 - **Reliable macOS background.** New `setHostPageBackgroundColor` recolors Monaco's HTML host page. Widget `backgroundColor` applies to both native and host-page layers.
 

@@ -219,6 +219,28 @@ void main() {
         );
       });
 
+      test('getThemeId returns value from bridge', () async {
+        final bundle = await _createBundle();
+        bundle.webview.injectCommandSuccess('getTheme', value: 'company-dark');
+        expect(await bundle.controller.getThemeId(), 'company-dark');
+      });
+
+      test('getThemeId returns null when bridge call fails', () async {
+        final bundle = await _createBundle();
+        bundle.webview.injectCommandFailure(
+          'getTheme',
+          message: 'monaco.editor.getTheme is not a function',
+        );
+        expect(await bundle.controller.getThemeId(), isNull);
+      });
+
+      test('getThemeId returns null when bridge reports empty string',
+          () async {
+        final bundle = await _createBundle();
+        bundle.webview.injectCommandSuccess('getTheme', value: '');
+        expect(await bundle.controller.getThemeId(), isNull);
+      });
+
       test('MonacoThemeDefinition JSON round-trip preserves rules and colors',
           () {
         const original = MonacoThemeDefinition(

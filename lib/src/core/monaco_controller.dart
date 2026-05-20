@@ -304,6 +304,22 @@ class MonacoController {
     await _invokeMonacoCommand('setTheme', [themeId]);
   }
 
+  /// Returns the Monaco theme id currently active in the editor.
+  ///
+  /// Reads the live value from Monaco's runtime rather than caching what
+  /// Dart most recently sent. Returns `null` when Monaco can't report a
+  /// theme (e.g. on engine versions that don't expose `editor.getTheme()`)
+  /// or when the bridge call fails - this method follows the same
+  /// fallback-on-failure contract as [getValue] / [getLineCount].
+  Future<String?> getThemeId() async {
+    try {
+      final result = await _invokeMonacoCommand('getTheme', []);
+      return result is String && result.isNotEmpty ? result : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Registers or replaces a custom Monaco theme.
   ///
   /// After registration, activate the theme by calling

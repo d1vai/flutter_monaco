@@ -859,6 +859,16 @@ class MonacoAssets {
                     monaco.editor.setTheme(theme);
                     return true;
                   },
+                  getTheme: () => {
+                    if (!window.monaco || !monaco.editor ||
+                        typeof monaco.editor.getTheme !== 'function') {
+                      return null;
+                    }
+                    const theme = monaco.editor.getTheme();
+                    if (!theme) return null;
+                    if (typeof theme === 'string') return theme;
+                    return theme.themeName || theme.id || null;
+                  },
                   setLanguage: (lang) => {
                     monaco.editor.setModelLanguage(requireModel(), lang);
                     return true;
