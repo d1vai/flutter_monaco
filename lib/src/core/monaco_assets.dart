@@ -797,6 +797,13 @@ class MonacoAssets {
                     monaco.editor.setTheme(theme);
                     return true;
                   }),
+                  getTheme: () => safe(() => {
+                    if (!window.monaco || !monaco.editor || !monaco.editor.getTheme) {
+                      return null;
+                    }
+                    const theme = monaco.editor.getTheme();
+                    return theme?.themeName || theme?.id || null;
+                  }, null),
                   setLanguage: (lang) => safe(() => {
                     const ed = E();
                     const model = ed?.getModel ? ed.getModel() : null;

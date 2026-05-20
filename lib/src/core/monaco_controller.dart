@@ -297,6 +297,15 @@ class MonacoController {
     );
   }
 
+  /// Returns the Monaco theme identifier currently active in the editor.
+  Future<String?> getThemeId() async {
+    return _executeJavaScript<String>(
+      'flutterMonaco.getTheme()',
+      defaultValue: null,
+      jsonAware: false,
+    );
+  }
+
   /// Registers or replaces a Monaco theme definition.
   ///
   /// [data] should follow Monaco's `IStandaloneThemeData` shape.

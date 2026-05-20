@@ -47,6 +47,7 @@ class MonacoEditor extends StatefulWidget {
     this.controllerFactory,
     this.initialValue,
     this.options = const EditorOptions(),
+    this.themeId,
     this.initialSelection,
     this.autofocus = false,
     this.customCss,
@@ -93,6 +94,12 @@ class MonacoEditor extends StatefulWidget {
   ///
   /// Changing this property will dynamically update the editor instance.
   final EditorOptions options;
+
+  /// Optional raw Monaco theme identifier.
+  ///
+  /// When set, this takes precedence over [options.theme] and allows callers
+  /// to use dynamically defined custom themes via `defineTheme(...)`.
+  final String? themeId;
 
   /// The text range to select immediately after initialization.
   final Range? initialSelection;
@@ -261,7 +268,11 @@ class _MonacoEditorState extends State<MonacoEditor> {
     if (widget.options != oldWidget.options) {
       _ignoreAsync(_controller!.updateOptions(widget.options));
       // Explicitly update theme and language as they require separate bridge calls.
-      _ignoreAsync(_controller!.setTheme(widget.options.theme));
+      _ignoreAsync(
+        widget.themeId == null
+            ? _controller!.setTheme(widget.options.theme)
+            : _controller!.setThemeById(widget.themeId!),
+      );
       _ignoreAsync(_controller!.setLanguage(widget.options.language));
     }
 
@@ -327,7 +338,11 @@ class _MonacoEditorState extends State<MonacoEditor> {
         // We can't easily check if they differ from what we passed to create(),
         // so we just re-apply them to be safe. This is cheap if no changes.
         await _controller!.updateOptions(widget.options);
-        await _controller!.setTheme(widget.options.theme);
+        if (widget.themeId == null) {
+          await _controller!.setTheme(widget.options.theme);
+        } else {
+          await _controller!.setThemeById(widget.themeId!);
+        }
         await _controller!.setLanguage(widget.options.language);
       }
 
